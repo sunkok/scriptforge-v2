@@ -31,6 +31,7 @@ export default function EditorToolbar({ editor }: Props) {
   const setTitleBlock = useScriptForgeStore((s) => s.setTitleBlock);
   const setScriptMeta = useScriptForgeStore((s) => s.setScriptMeta);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const noIssuesRef = useRef<HTMLDivElement>(null);
   const [showAutoFixPanel, setShowAutoFixPanel] = useState(false);
   const [noIssuesVisible, setNoIssuesVisible] = useState(false);
 
@@ -38,6 +39,17 @@ export default function EditorToolbar({ editor }: Props) {
     if (!noIssuesVisible) return;
     const t = setTimeout(() => setNoIssuesVisible(false), 3000);
     return () => clearTimeout(t);
+  }, [noIssuesVisible]);
+
+  useEffect(() => {
+    if (!noIssuesVisible) return;
+    const handler = (e: MouseEvent) => {
+      if (noIssuesRef.current && !noIssuesRef.current.contains(e.target as Node)) {
+        setNoIssuesVisible(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
   }, [noIssuesVisible]);
 
   // Reactive active-mark state — updates whenever selection or doc changes.
@@ -202,31 +214,29 @@ export default function EditorToolbar({ editor }: Props) {
         </div>
 
         {/* Right: Auto-fix */}
-        <div className="flex items-center w-[100px] justify-end">
+        <div className="relative flex items-center w-[100px] justify-end" ref={noIssuesRef}>
           <ToolButton
             icon={<Wand2 size={13} />}
             label="Auto-fix"
             onClick={handleAutoFix}
             disabled={!editor}
           />
+          {noIssuesVisible && (
+            <div
+              className="absolute top-full right-0 mt-2 z-50 px-3 py-2 rounded-lg font-sans text-[13px] cursor-pointer select-none whitespace-nowrap"
+              style={{
+                background: "#1e1e28",
+                border: "1px solid #2a2a35",
+                color: "#9099a8",
+                boxShadow: "0 4px 20px rgba(0,0,0,0.4)",
+              }}
+              onClick={() => setNoIssuesVisible(false)}
+            >
+              No formatting issues found
+            </div>
+          )}
         </div>
       </div>
-
-      {/* No-issues toast */}
-      {noIssuesVisible && (
-        <div
-          className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 px-4 py-2.5 rounded-lg font-sans text-[13px] cursor-pointer select-none"
-          style={{
-            background: "#1e1e28",
-            border: "1px solid #2a2a35",
-            color: "#9099a8",
-            boxShadow: "0 4px 20px rgba(0,0,0,0.4)",
-          }}
-          onClick={() => setNoIssuesVisible(false)}
-        >
-          No formatting issues found
-        </div>
-      )}
 
       {/* Auto-fix panel */}
       {showAutoFixPanel && editor && (
