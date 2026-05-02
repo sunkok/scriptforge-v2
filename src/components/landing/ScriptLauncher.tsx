@@ -8,6 +8,7 @@ import { relativeTime } from "@/lib/relative-time";
 import { useScriptForgeStore } from "@/lib/store";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import TypeToConfirmDialog from "@/components/ui/TypeToConfirmDialog";
+import NameInputDialog from "@/components/ui/NameInputDialog";
 
 export default function ScriptLauncher() {
   const router = useRouter();
@@ -18,7 +19,7 @@ export default function ScriptLauncher() {
 
   const [profilesLoading, setProfilesLoading] = useState(true);
   const [scripts, setScripts] = useState<ScriptMetadata[] | null>(null);
-  const [creating, setCreating] = useState(false);
+  const [newScriptDialogVisible, setNewScriptDialogVisible] = useState(false);
   const [pendingDelete, setPendingDelete] = useState<ScriptMetadata | null>(null);
 
   // Profile creation
@@ -68,26 +69,17 @@ export default function ScriptLauncher() {
     if (addingProfile) addInputRef.current?.focus();
   }, [addingProfile]);
 
-  async function handleCreate() {
-    if (creating || !activeProfile) return;
-    setCreating(true);
-    try {
-      const res = await fetch("/api/scripts", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          title: "Untitled",
-          fountain: "",
-          ownerProfileId: activeProfile.profileId,
-        }),
-      });
-      if (res.ok) {
-        const data = (await res.json()) as ScriptMetadata;
-        router.push(`/editor?id=${data.scriptId}`);
-      }
-    } finally {
-      setCreating(false);
-    }
+  async function handleCreateScript(title: string) {
+    if (!activeProfile) return;
+    const res = await fetch("/api/scripts", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ title, fountain: "", ownerProfileId: activeProfile.profileId }),
+    });
+    if (!res.ok) throw new Error("Failed to create script. Try again.");
+    const data = (await res.json()) as ScriptMetadata;
+    setNewScriptDialogVisible(false);
+    router.push(`/editor?id=${data.scriptId}`);
   }
 
   async function handleAddProfile() {
@@ -215,16 +207,15 @@ export default function ScriptLauncher() {
         <div className="border-t border-[var(--color-border-subtle)]" />
 
         <button
-          onClick={handleCreate}
-          disabled={creating}
-          className="w-full flex items-center gap-3 px-5 py-3 hover:bg-[var(--color-border-subtle)] transition-colors group disabled:opacity-50"
+          onClick={() => setNewScriptDialogVisible(true)}
+          className="w-full flex items-center gap-3 px-5 py-3 hover:bg-[var(--color-border-subtle)] transition-colors group"
         >
           <Plus
             size={15}
             className="text-indigo-400 shrink-0 group-hover:text-indigo-300 transition-colors"
           />
           <span className="text-indigo-400 text-[14px] font-sans group-hover:text-indigo-300 transition-colors">
-            {creating ? "Creating…" : "Create new script"}
+            Create new script
           </span>
         </button>
       </div>
@@ -245,6 +236,16 @@ export default function ScriptLauncher() {
               .catch(() => setScripts([]));
           }}
           onCancel={() => setPendingDelete(null)}
+        />
+      )}
+      {newScriptDialogVisible && (
+        <NameInputDialog
+          title="New script"
+          body="What's the title of your screenplay?"
+          placeholder="e.g., Resonant Skies"
+          confirmLabel="Create"
+          onConfirm={handleCreateScript}
+          onCancel={() => setNewScriptDialogVisible(false)}
         />
       )}
     </>

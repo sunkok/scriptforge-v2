@@ -55,6 +55,9 @@ interface ScriptForgeState {
   setActiveProfile: (profile: Profile | null) => void;
   profiles: Profile[];
   setProfiles: (profiles: Profile[]) => void;
+  // Immediate-save callback registered by ScreenplayEditor
+  requestSave: (() => Promise<void>) | null;
+  setRequestSave: (fn: (() => Promise<void>) | null) => void;
 }
 
 export const useScriptForgeStore = create<ScriptForgeState>()((set) => ({
@@ -97,4 +100,6 @@ export const useScriptForgeStore = create<ScriptForgeState>()((set) => ({
   },
   profiles: [],
   setProfiles: (profiles) => set({ profiles }),
+  requestSave: null,
+  setRequestSave: (fn) => set({ requestSave: fn }),
 }));

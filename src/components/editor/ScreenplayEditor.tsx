@@ -90,6 +90,7 @@ export default function ScreenplayEditor({ scriptId }: Props) {
   const setScriptMeta = useScriptForgeStore((s) => s.setScriptMeta);
   const setSaveState = useScriptForgeStore((s) => s.setSaveState);
   const setSavedSlotLabel = useScriptForgeStore((s) => s.setSavedSlotLabel);
+  const setRequestSave = useScriptForgeStore((s) => s.setRequestSave);
   const activeProfile = useScriptForgeStore((s) => s.activeProfile);
   const setActiveProfile = useScriptForgeStore((s) => s.setActiveProfile);
   const profiles = useScriptForgeStore((s) => s.profiles);
@@ -259,6 +260,34 @@ export default function ScreenplayEditor({ scriptId }: Props) {
       if (autosaveTimerRef.current) clearTimeout(autosaveTimerRef.current);
     };
   }, []);
+
+  // Register an immediate-save callback in the store so EditorHeader can trigger it.
+  useEffect(() => {
+    if (!editor) return;
+    const save = async () => {
+      const { titleBlock, currentScriptId, setSaveState: setSS } = useScriptForgeStore.getState();
+      if (!currentScriptId) return;
+      if (autosaveTimerRef.current) {
+        clearTimeout(autosaveTimerRef.current);
+        autosaveTimerRef.current = null;
+      }
+      const fountain = tiptapToFountain(editor.state.doc.toJSON(), titleBlock);
+      setSS("saving");
+      const res = await fetch(`/api/scripts/${currentScriptId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ fountain }),
+      });
+      if (res.ok) {
+        setSS("saved");
+      } else {
+        setSS("error");
+        throw new Error("Save failed");
+      }
+    };
+    setRequestSave(save);
+    return () => { setRequestSave(null); };
+  }, [editor, setRequestSave]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleSuggestInsert = (text: string) => {
     if (!editor) return;

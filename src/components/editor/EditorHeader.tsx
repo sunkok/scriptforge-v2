@@ -15,6 +15,8 @@ import { useScriptForgeStore } from "@/lib/store";
 import type { ScriptMetadata } from "@/lib/types";
 import OpenScriptModal from "./OpenScriptModal";
 import VersionsModal from "./VersionsModal";
+import NameInputDialog from "@/components/ui/NameInputDialog";
+import UnsavedGuardDialog from "@/components/ui/UnsavedGuardDialog";
 
 const STATUS_CONFIG = {
   saved:    { dot: "bg-green-500",  label: "Saved" },
@@ -28,6 +30,9 @@ const STATUS_CONFIG = {
 export default function EditorHeader() {
   const router = useRouter();
   const scriptTitle = useScriptForgeStore((s) => s.scriptTitle);
+  const setScriptTitle = useScriptForgeStore((s) => s.setScriptTitle);
+  const setScriptMeta = useScriptForgeStore((s) => s.setScriptMeta);
+  const currentScriptId = useScriptForgeStore((s) => s.currentScriptId);
   const pageCount = useScriptForgeStore((s) => s.pageCount);
   const wordCount = useScriptForgeStore((s) => s.wordCount);
   const saveState = useScriptForgeStore((s) => s.saveState);
@@ -36,10 +41,22 @@ export default function EditorHeader() {
   const setIsVersionsModalOpen = useScriptForgeStore((s) => s.setIsVersionsModalOpen);
   const activeProfile = useScriptForgeStore((s) => s.activeProfile);
   const setActiveProfile = useScriptForgeStore((s) => s.setActiveProfile);
-  const [creatingNew, setCreatingNew] = useState(false);
+
   const [openModalVisible, setOpenModalVisible] = useState(false);
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
   const profileMenuRef = useRef<HTMLDivElement>(null);
+
+  // New script dialog
+  const [newScriptDialogVisible, setNewScriptDialogVisible] = useState(false);
+
+  // Unsaved guard: stores the action to run after save/discard
+  const [pendingAction, setPendingAction] = useState<{ label: string; fn: () => void } | null>(null);
+
+  // Inline title rename
+  const [renaming, setRenaming] = useState(false);
+  const [renameValue, setRenameValue] = useState("");
+  const [renameSaving, setRenameSaving] = useState(false);
+  const renameInputRef = useRef<HTMLInputElement>(null);
 
   // Close profile dropdown on outside click
   useEffect(() => {
@@ -53,36 +70,95 @@ export default function EditorHeader() {
     return () => document.removeEventListener("mousedown", handler);
   }, [profileMenuOpen]);
 
+  // Focus + select-all when rename input appears
+  useEffect(() => {
+    if (renaming && renameInputRef.current) {
+      renameInputRef.current.focus();
+      renameInputRef.current.select();
+    }
+  }, [renaming]);
+
   const { dot, label: baseLabel } = STATUS_CONFIG[saveState];
   const label = saveState === "saved" && savedSlotLabel ? `Saved (${savedSlotLabel})` : baseLabel;
 
-  async function handleNew() {
-    if (creatingNew) return;
-    if (!activeProfile) { router.push("/"); return; }
-    setCreatingNew(true);
-    try {
-      const res = await fetch("/api/scripts", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          title: "Untitled",
-          fountain: "",
-          ownerProfileId: activeProfile.profileId,
-        }),
-      });
-      if (res.ok) {
-        const data = (await res.json()) as ScriptMetadata;
-        router.push(`/editor?id=${data.scriptId}`);
-      }
-    } finally {
-      setCreatingNew(false);
+  // Runs `action` immediately if saved, otherwise shows the unsaved guard dialog.
+  function guardedAction(destination: string, action: () => void) {
+    const { saveState: current } = useScriptForgeStore.getState();
+    if (current === "saved" || current === "loading" || current === "readonly") {
+      action();
+    } else {
+      setPendingAction({ label: destination, fn: action });
     }
+  }
+
+  // Called by UnsavedGuardDialog "Save and continue" button.
+  async function handleSaveAndContinue() {
+    const { saveState: current, requestSave } = useScriptForgeStore.getState();
+    if (current === "saving") {
+      await new Promise<void>((resolve, reject) => {
+        let timer: ReturnType<typeof setTimeout>;
+        const unsub = useScriptForgeStore.subscribe((state) => {
+          if (state.saveState === "saved") { clearTimeout(timer); unsub(); resolve(); }
+          else if (state.saveState === "error") { clearTimeout(timer); unsub(); reject(new Error("Save failed. Retry or discard.")); }
+        });
+        timer = setTimeout(() => { unsub(); reject(new Error("Save timed out.")); }, 10000);
+      });
+    } else if (requestSave) {
+      await requestSave();
+    }
+    const action = pendingAction;
+    setPendingAction(null);
+    action?.fn();
+  }
+
+  function handleNew() {
+    guardedAction("creating a new script", () => setNewScriptDialogVisible(true));
+  }
+
+  async function handleCreateScript(title: string) {
+    if (!activeProfile) return;
+    const res = await fetch("/api/scripts", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ title, fountain: "", ownerProfileId: activeProfile.profileId }),
+    });
+    if (!res.ok) throw new Error("Failed to create script. Try again.");
+    const data = (await res.json()) as ScriptMetadata;
+    setNewScriptDialogVisible(false);
+    router.push(`/editor?id=${data.scriptId}`);
   }
 
   function handleSwitchProfile() {
     setProfileMenuOpen(false);
-    setActiveProfile(null);
-    router.push("/");
+    guardedAction("switching profiles", () => { setActiveProfile(null); router.push("/"); });
+  }
+
+  function startRename() {
+    setRenameValue(scriptTitle);
+    setRenaming(true);
+  }
+
+  async function commitRename() {
+    const trimmed = renameValue.trim();
+    if (!trimmed || trimmed === scriptTitle || !currentScriptId) {
+      setRenaming(false);
+      return;
+    }
+    setRenameSaving(true);
+    try {
+      const res = await fetch(`/api/scripts/${currentScriptId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title: trimmed }),
+      });
+      if (res.ok) {
+        setScriptTitle(trimmed);
+        setScriptMeta({ title: trimmed });
+      }
+    } finally {
+      setRenameSaving(false);
+      setRenaming(false);
+    }
   }
 
   return (
@@ -91,7 +167,7 @@ export default function EditorHeader() {
         {/* Left: home icon + title */}
         <div className="flex items-center gap-3 min-w-0">
           <button
-            onClick={() => { setActiveProfile(null); router.push("/"); }}
+            onClick={() => guardedAction("going home", () => { setActiveProfile(null); router.push("/"); })}
             className="shrink-0 p-1.5 -ml-1 rounded text-[var(--color-fg-secondary)] hover:text-indigo-400 transition-colors"
             title="Home"
           >
@@ -99,9 +175,32 @@ export default function EditorHeader() {
           </button>
 
           <div className="flex flex-col justify-center min-w-0">
-            <span className="text-white font-bold text-[18px] leading-tight truncate">
-              {scriptTitle || "Untitled"}
-            </span>
+            {renaming ? (
+              <input
+                ref={renameInputRef}
+                value={renameValue}
+                onChange={(e) => setRenameValue(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") void commitRename();
+                  if (e.key === "Escape") setRenaming(false);
+                }}
+                onBlur={() => void commitRename()}
+                disabled={renameSaving}
+                maxLength={200}
+                className="text-white font-bold text-[18px] leading-tight bg-transparent focus:outline-none border-b border-indigo-500 disabled:opacity-60 min-w-0"
+                style={{ width: "280px" }}
+                autoComplete="off"
+                spellCheck={false}
+              />
+            ) : (
+              <button
+                onClick={startRename}
+                title="Click to rename"
+                className="text-left text-white font-bold text-[18px] leading-tight truncate max-w-[280px] hover:border-b hover:border-indigo-500/50 transition-colors cursor-text"
+              >
+                {scriptTitle || "Untitled"}
+              </button>
+            )}
             <div className="flex items-center gap-0 text-[11px] text-[var(--color-fg-secondary)] leading-none mt-0.5">
               <span className={`inline-block w-1.5 h-1.5 rounded-full ${dot} mr-1.5 shrink-0`} />
               <span>{label}</span>
@@ -151,14 +250,13 @@ export default function EditorHeader() {
           )}
           <HeaderButton
             icon={<Plus size={14} />}
-            label={creatingNew ? "Creating…" : "New"}
+            label="New"
             onClick={handleNew}
-            disabled={creatingNew}
           />
           <HeaderButton
             icon={<FolderOpen size={14} />}
             label="Open"
-            onClick={() => setOpenModalVisible(true)}
+            onClick={() => guardedAction("opening another script", () => setOpenModalVisible(true))}
           />
           <HeaderButton
             icon={<History size={14} />}
@@ -183,6 +281,24 @@ export default function EditorHeader() {
       )}
       {isVersionsModalOpen && (
         <VersionsModal onClose={() => setIsVersionsModalOpen(false)} />
+      )}
+      {newScriptDialogVisible && (
+        <NameInputDialog
+          title="New script"
+          body="What's the title of your screenplay?"
+          placeholder="e.g., Resonant Skies"
+          confirmLabel="Create"
+          onConfirm={handleCreateScript}
+          onCancel={() => setNewScriptDialogVisible(false)}
+        />
+      )}
+      {pendingAction && (
+        <UnsavedGuardDialog
+          destination={pendingAction.label}
+          onSave={handleSaveAndContinue}
+          onDiscard={() => { const a = pendingAction; setPendingAction(null); a.fn(); }}
+          onCancel={() => setPendingAction(null)}
+        />
       )}
     </>
   );
