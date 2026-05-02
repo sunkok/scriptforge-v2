@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Inter, Courier_Prime } from "next/font/google";
+import { Inter, Courier_Prime, Playfair_Display } from "next/font/google";
 import "./globals.css";
 
 const inter = Inter({
@@ -12,6 +12,12 @@ const courierPrime = Courier_Prime({
   weight: ["400", "700"],
   style: ["normal", "italic"],
   subsets: ["latin"],
+});
+
+const playfairDisplay = Playfair_Display({
+  variable: "--font-playfair",
+  subsets: ["latin"],
+  weight: ["400", "700"],
 });
 
 export const metadata: Metadata = {
@@ -27,7 +33,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${inter.variable} ${courierPrime.variable} h-full antialiased`}
+      className={`${inter.variable} ${courierPrime.variable} ${playfairDisplay.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col bg-[var(--color-canvas)]">
         {children}
