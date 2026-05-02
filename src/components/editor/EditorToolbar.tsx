@@ -142,32 +142,31 @@ export default function EditorToolbar({ editor }: Props) {
           />
         </div>
 
-        {/* Center: element type pills */}
-        <div className="flex items-center gap-0.5 bg-[var(--color-surface)] rounded-md p-0.5">
-          {TOOLBAR_ELEMENTS.map((type) => {
-            const active = type === currentElementType;
-            return (
-              <button
-                key={type}
-                disabled={!editor}
-                onClick={() => handleSetElement(type)}
-                className={[
-                  "px-2.5 py-1 text-[11px] font-sans rounded transition-colors whitespace-nowrap",
-                  active
-                    ? "bg-indigo-600 text-white"
-                    : "text-[var(--color-fg-secondary)] hover:text-indigo-400 hover:bg-[var(--color-border-subtle)] disabled:opacity-40",
-                ].join(" ")}
-              >
-                <span className="hidden lg:inline">{ELEMENT_DISPLAY_NAMES[type]}</span>
-                <span className="lg:hidden">{SHORT_NAMES[type]}</span>
-              </button>
-            );
-          })}
-        </div>
-
-        {/* Right: formatting buttons + Auto-fix */}
+        {/* Center: element type pills + formatting buttons */}
         <div className="flex items-center gap-2">
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-0.5 bg-[var(--color-surface)] rounded-md p-0.5">
+            {TOOLBAR_ELEMENTS.map((type) => {
+              const active = type === currentElementType;
+              return (
+                <button
+                  key={type}
+                  disabled={!editor}
+                  onClick={() => handleSetElement(type)}
+                  className={[
+                    "px-2.5 py-1 text-[11px] font-sans rounded transition-colors whitespace-nowrap",
+                    active
+                      ? "bg-indigo-600 text-white"
+                      : "text-[var(--color-fg-secondary)] hover:text-indigo-400 hover:bg-[var(--color-border-subtle)] disabled:opacity-40",
+                  ].join(" ")}
+                >
+                  <span className="hidden lg:inline">{ELEMENT_DISPLAY_NAMES[type]}</span>
+                  <span className="lg:hidden">{SHORT_NAMES[type]}</span>
+                </button>
+              );
+            })}
+          </div>
+
+          <div className="flex items-center gap-0.5 bg-[var(--color-surface)] rounded-md p-0.5">
             <FormatButton
               icon={<Bold size={12} />}
               label="Bold (⌘B)"
@@ -197,9 +196,10 @@ export default function EditorToolbar({ editor }: Props) {
               disabled={!editor}
             />
           </div>
+        </div>
 
-          <div className="w-px h-4 bg-[var(--color-border-subtle)]" />
-
+        {/* Right: Auto-fix */}
+        <div className="flex items-center w-[100px] justify-end">
           <ToolButton
             icon={<Wand2 size={13} />}
             label="Auto-fix"
@@ -288,9 +288,9 @@ function FormatButton({
       disabled={disabled}
       title={label}
       className={[
-        "w-7 h-7 flex items-center justify-center rounded transition-colors disabled:opacity-40",
+        "px-2.5 py-1 flex items-center justify-center rounded transition-colors disabled:opacity-40",
         active
-          ? "bg-indigo-600/20 text-indigo-400"
+          ? "bg-indigo-600 text-white"
           : "text-[var(--color-fg-secondary)] hover:text-indigo-400 hover:bg-[var(--color-border-subtle)]",
       ].join(" ")}
     >
