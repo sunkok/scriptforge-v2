@@ -20,6 +20,8 @@ import { PaginationEngine } from "@/lib/pagination/engine";
 import { PaginationEngineContext } from "./PaginationContext";
 import { useScriptForgeStore } from "@/lib/store";
 import SuggestPopup, { type SuggestPopupState } from "./SuggestPopup";
+import EditorHeader from "./EditorHeader";
+import EditorToolbar from "./EditorToolbar";
 import { isElementType, ELEMENT_DISPLAY_NAMES } from "@/lib/editor/types";
 
 const CustomDocument = Document.extend({ content: "page+" });
@@ -69,6 +71,7 @@ export default function ScreenplayEditor() {
   const engineRef = useRef<PaginationEngine | null>(null);
   const pageCount = useScriptForgeStore((s) => s.pageCount);
   const setPageCount = useScriptForgeStore((s) => s.setPageCount);
+  const setWordCount = useScriptForgeStore((s) => s.setWordCount);
   const currentElementType = useScriptForgeStore((s) => s.currentElementType);
   const setCurrentElementType = useScriptForgeStore((s) => s.setCurrentElementType);
 
@@ -111,6 +114,8 @@ export default function ScreenplayEditor() {
         if (node.type.name === "page") count++;
       });
       setPageCount(count);
+      const words = editor.getText().split(/\s+/).filter(Boolean).length;
+      setWordCount(words);
       setSuggestState(getSuggestState(editor));
     },
 
@@ -142,8 +147,12 @@ export default function ScreenplayEditor() {
 
   return (
     <PaginationEngineContext.Provider value={engine}>
-      <div className="h-screen bg-[var(--color-canvas)] overflow-y-auto py-10">
-        <EditorContent editor={editor} />
+      <div className="h-screen flex flex-col bg-[var(--color-canvas)]">
+        <EditorHeader />
+        <EditorToolbar editor={editor} />
+        <div className="flex-1 overflow-y-auto py-10">
+          <EditorContent editor={editor} />
+        </div>
       </div>
 
       {editor && (

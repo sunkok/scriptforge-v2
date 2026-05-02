@@ -15,6 +15,8 @@ interface ScriptForgeState {
   setCurrentElementType: (type: ElementType | null) => void;
   pageCount: number;
   setPageCount: (n: number) => void;
+  wordCount: number;
+  setWordCount: (n: number) => void;
   paginationStatus: PaginationStatus;
   setPaginationStatus: (status: PaginationStatus) => void;
   scriptMeta: ScriptMeta;
@@ -26,6 +28,8 @@ export const useScriptForgeStore = create<ScriptForgeState>()((set) => ({
   setCurrentElementType: (type) => set({ currentElementType: type }),
   pageCount: 1,
   setPageCount: (n) => set({ pageCount: n }),
+  wordCount: 0,
+  setWordCount: (n) => set({ wordCount: n }),
   paginationStatus: "idle",
   setPaginationStatus: (status) => set({ paginationStatus: status }),
   scriptMeta: { title: "", author: "", contact: "", draftLabel: "" },
