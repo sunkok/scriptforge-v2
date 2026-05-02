@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import type { ElementType } from "@/lib/editor/types";
-import type { SaveState } from "@/lib/types";
+import type { SaveState, ScriptTitleBlock } from "@/lib/types";
 
 export type PaginationStatus = "idle" | "paginating" | "reconciling";
 
@@ -31,6 +31,8 @@ interface ScriptForgeState {
   setCurrentScriptId: (id: string | null) => void;
   scriptTitle: string;
   setScriptTitle: (title: string) => void;
+  titleBlock: ScriptTitleBlock | undefined;
+  setTitleBlock: (block: ScriptTitleBlock | undefined) => void;
   saveState: SaveState;
   setSaveState: (state: SaveState) => void;
 }
@@ -51,6 +53,8 @@ export const useScriptForgeStore = create<ScriptForgeState>()((set) => ({
   setCurrentScriptId: (id) => set({ currentScriptId: id }),
   scriptTitle: "Untitled",
   setScriptTitle: (title) => set({ scriptTitle: title }),
+  titleBlock: undefined,
+  setTitleBlock: (block) => set({ titleBlock: block }),
   saveState: "saved",
   setSaveState: (state) => set({ saveState: state }),
 }));

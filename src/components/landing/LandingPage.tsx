@@ -16,23 +16,23 @@ export default function LandingPage() {
 
       <div className="relative flex flex-col items-center gap-10 w-full max-w-[480px]">
         {/* Logo + wordmark */}
-        <div className="flex flex-col items-center gap-4">
+        <div className="flex flex-col items-center gap-1">
           <Image
             src="/scriptforge-logo.png"
             alt="Script Forge logo"
-            width={200}
-            height={200}
-            className="w-[200px] h-auto"
+            width={884}
+            height={473}
+            className="w-[250px] h-auto"
             priority
           />
-          <div className="flex flex-col items-center gap-1.5">
+          <div className="flex flex-col items-center gap-4">
             <h1
               className="text-white text-[48px] leading-none tracking-tight"
               style={{ fontFamily: "var(--font-playfair), Georgia, serif", fontWeight: 700 }}
             >
               Script Forge
             </h1>
-            <p className="text-[var(--color-fg-secondary)] text-[14px] font-sans">
+            <p className="text-[var(--color-fg-secondary)] text-[15px] font-sans">
               Browser-based screenwriting
             </p>
           </div>

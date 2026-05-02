@@ -24,8 +24,9 @@ import SuggestPopup, { type SuggestPopupState } from "./SuggestPopup";
 import EditorHeader from "./EditorHeader";
 import EditorToolbar from "./EditorToolbar";
 import { isElementType, ELEMENT_DISPLAY_NAMES } from "@/lib/editor/types";
-import { fountainToProseMirrorDoc } from "@/lib/fountain/load-minimal";
-import { proseMirrorDocToFountain } from "@/lib/fountain/serialize-minimal";
+import { fountainToTiptap } from "@/lib/fountain/parser";
+import { tiptapToFountain } from "@/lib/fountain/serializer";
+import { parseTitleBlock } from "@/lib/fountain/title-block";
 
 const CustomDocument = Document.extend({ content: "page+" });
 
@@ -83,6 +84,8 @@ export default function ScreenplayEditor({ scriptId }: Props) {
   const setCurrentElementType = useScriptForgeStore((s) => s.setCurrentElementType);
   const setCurrentScriptId = useScriptForgeStore((s) => s.setCurrentScriptId);
   const setScriptTitle = useScriptForgeStore((s) => s.setScriptTitle);
+  const setTitleBlock = useScriptForgeStore((s) => s.setTitleBlock);
+  const setScriptMeta = useScriptForgeStore((s) => s.setScriptMeta);
   const setSaveState = useScriptForgeStore((s) => s.setSaveState);
 
   // Stable refs so Tiptap callbacks always see current values.
@@ -141,7 +144,8 @@ export default function ScreenplayEditor({ scriptId }: Props) {
 
       if (autosaveTimerRef.current) clearTimeout(autosaveTimerRef.current);
       autosaveTimerRef.current = setTimeout(async () => {
-        const fountain = proseMirrorDocToFountain(editor.state.doc.toJSON());
+        const { titleBlock } = useScriptForgeStore.getState();
+        const fountain = tiptapToFountain(editor.state.doc.toJSON(), titleBlock);
         setSaveStateRef.current("saving");
         try {
           const res = await fetch(`/api/scripts/${currentId}`, {
@@ -200,9 +204,20 @@ export default function ScreenplayEditor({ scriptId }: Props) {
         };
         if (cancelled) return;
 
+        const fountain = data.fountain ?? "";
+        const tb = parseTitleBlock(fountain);
         setCurrentScriptId(data.scriptId);
-        setScriptTitle(data.title || "Untitled");
-        editor.commands.setContent(fountainToProseMirrorDoc(data.fountain ?? ""));
+        setScriptTitle(data.title || tb?.title || "Untitled");
+        setTitleBlock(tb);
+        if (tb) {
+          setScriptMeta({
+            title: tb.title ?? "",
+            author: tb.author ?? "",
+            contact: tb.contact ?? "",
+            draftLabel: tb.draft ?? "",
+          });
+        }
+        editor.commands.setContent(fountainToTiptap(fountain));
         setSaveState("saved");
       })
       .catch(() => {
