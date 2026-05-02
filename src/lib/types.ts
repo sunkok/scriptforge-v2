@@ -54,3 +54,18 @@ export type AutosavesIndex = {
   scriptId: string;
   snapshots: AutosaveSnapshot[];
 };
+
+export type ShareRecord = {
+  token: string;
+  scriptId: string;
+  versionId: string;
+  scriptTitle: string;
+  versionLabel: string;
+  createdAt: string;
+  expiresAt: string | null;
+  revokedAt: string | null;
+};
+
+export type SharesIndex = {
+  shares: ShareRecord[];
+};

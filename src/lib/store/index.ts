@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import type { ElementType } from "@/lib/editor/types";
-import type { AutosaveSnapshot, SaveState, ScriptTitleBlock, VersionMetadata } from "@/lib/types";
+import type { AutosaveSnapshot, SaveState, ScriptTitleBlock, ShareRecord, VersionMetadata } from "@/lib/types";
 
 export type PaginationStatus = "idle" | "paginating" | "reconciling";
 
@@ -47,6 +47,9 @@ interface ScriptForgeState {
   // Transient slot label shown in header after a snapshot is taken ("Slot 1")
   savedSlotLabel: string | null;
   setSavedSlotLabel: (label: string | null) => void;
+  // Share records (all scripts — filtered in UI by currentScriptId)
+  shares: ShareRecord[];
+  setShares: (shares: ShareRecord[]) => void;
 }
 
 export const useScriptForgeStore = create<ScriptForgeState>()((set) => ({
@@ -77,4 +80,6 @@ export const useScriptForgeStore = create<ScriptForgeState>()((set) => ({
   setAutosaves: (autosaves) => set({ autosaves }),
   savedSlotLabel: null,
   setSavedSlotLabel: (label) => set({ savedSlotLabel: label }),
+  shares: [],
+  setShares: (shares) => set({ shares }),
 }));
