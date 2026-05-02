@@ -13,6 +13,7 @@ import {
 import { useScriptForgeStore } from "@/lib/store";
 import type { ScriptMetadata } from "@/lib/types";
 import OpenScriptModal from "./OpenScriptModal";
+import VersionsModal from "./VersionsModal";
 
 const STATUS_CONFIG = {
   saved:    { dot: "bg-green-500",  label: "Saved" },
@@ -29,6 +30,8 @@ export default function EditorHeader() {
   const pageCount = useScriptForgeStore((s) => s.pageCount);
   const wordCount = useScriptForgeStore((s) => s.wordCount);
   const saveState = useScriptForgeStore((s) => s.saveState);
+  const isVersionsModalOpen = useScriptForgeStore((s) => s.isVersionsModalOpen);
+  const setIsVersionsModalOpen = useScriptForgeStore((s) => s.setIsVersionsModalOpen);
   const [creatingNew, setCreatingNew] = useState(false);
   const [openModalVisible, setOpenModalVisible] = useState(false);
 
@@ -96,7 +99,7 @@ export default function EditorHeader() {
           <HeaderButton
             icon={<History size={14} />}
             label="Versions"
-            onClick={() => console.log("Versions clicked")}
+            onClick={() => setIsVersionsModalOpen(true)}
           />
           <HeaderButton
             icon={<SlidersHorizontal size={14} />}
@@ -113,6 +116,9 @@ export default function EditorHeader() {
 
       {openModalVisible && (
         <OpenScriptModal onClose={() => setOpenModalVisible(false)} />
+      )}
+      {isVersionsModalOpen && (
+        <VersionsModal onClose={() => setIsVersionsModalOpen(false)} />
       )}
     </>
   );

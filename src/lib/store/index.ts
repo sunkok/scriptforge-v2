@@ -38,6 +38,9 @@ interface ScriptForgeState {
   // Versions for the active script
   versions: VersionMetadata[];
   setVersions: (versions: VersionMetadata[]) => void;
+  // Versions modal visibility
+  isVersionsModalOpen: boolean;
+  setIsVersionsModalOpen: (open: boolean) => void;
 }
 
 export const useScriptForgeStore = create<ScriptForgeState>()((set) => ({
@@ -62,4 +65,6 @@ export const useScriptForgeStore = create<ScriptForgeState>()((set) => ({
   setSaveState: (state) => set({ saveState: state }),
   versions: [],
   setVersions: (versions) => set({ versions }),
+  isVersionsModalOpen: false,
+  setIsVersionsModalOpen: (open) => set({ isVersionsModalOpen: open }),
 }));
