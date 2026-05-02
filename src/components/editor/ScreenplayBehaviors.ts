@@ -54,18 +54,7 @@ export const ScreenplayBehaviors = Extension.create({
         const targetType = TAB_MAP[currentType];
 
         editor.commands.splitBlock();
-        editor.commands.setNode(targetType);
-
-        // Character → Parenthetical: pre-fill "()" and place cursor between the parens.
-        if (currentType === "character") {
-          editor.commands.insertContent("()");
-          const pos = editor.state.selection.$anchor.pos - 1;
-          editor.view.dispatch(
-            editor.state.tr.setSelection(TextSelection.create(editor.state.doc, pos))
-          );
-        }
-
-        return true;
+        return editor.commands.setNode(targetType);
       },
 
       // Shift+Tab: relabel CURRENT line to a different type — no new line.
