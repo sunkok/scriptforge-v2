@@ -1,0 +1,86 @@
+@import "tailwindcss";
+
+/* ─── Calm Studio design tokens ─────────────────────────────────────────────── */
+@theme {
+  /* Colors — canvas & surface */
+  --color-canvas: #0f0f14;
+  --color-surface: #161A22;
+  --color-paper: #FFFFFF;
+
+  /* Colors — borders */
+  --color-border-subtle: #1F2530;
+  --color-border-strong: #2A3140;
+
+  /* Colors — foreground */
+  --color-fg-primary: #E6E8EC;
+  --color-fg-secondary: #9099A8;
+  --color-fg-paper: #1A1F2C;
+
+  /* Colors — accent */
+  --color-accent: #6366f1;
+  --color-accent-hover: #818cf8;
+  --color-accent-muted: #3730a3;
+
+  /* Font families — provided by next/font/google via CSS variables */
+  --font-sans: var(--font-inter), system-ui, sans-serif;
+  --font-mono: var(--font-courier-prime), 'Courier New', monospace;
+
+  /* Font sizes — UI scale */
+  --text-ui-sm: 12px;
+  --text-ui-sm--line-height: 16px;
+  --text-ui-base: 14px;
+  --text-ui-base--line-height: 20px;
+  --text-ui-title: 16px;
+  --text-ui-title--line-height: 22px;
+
+  /* Shadows */
+  --shadow-paper: 0 4px 32px rgba(0, 0, 0, 0.55);
+  --shadow-panel: -4px 0 24px rgba(0, 0, 0, 0.3);
+}
+
+body {
+  background: var(--color-canvas);
+  color: var(--color-fg-primary);
+  font-family: var(--font-sans);
+}
+
+/* ─── US Letter page sheet ───────────────────────────────────────────────────── */
+.page-sheet {
+  width: 816px;   /* 8.5in at 96dpi */
+  min-height: 1056px; /* 11in at 96dpi */
+  background: #ffffff;
+  box-shadow: var(--shadow-paper);
+  margin: 40px auto;
+  padding: 96px;  /* 1in at 96dpi */
+  box-sizing: border-box;
+  border-radius: 2px;
+}
+
+/* ─── Tiptap editor reset ────────────────────────────────────────────────── */
+.tiptap:focus {
+  outline: none;
+}
+
+/* ─── Page node content — Courier Prime 12pt ─────────────────────────────── */
+.page-content {
+  font-family: var(--font-courier-prime), 'Courier New', monospace;
+  font-size: 12pt;
+  line-height: 1;
+  color: #1a1a1a;
+}
+
+.page-content p {
+  margin: 0;
+  min-height: 1em;
+}
+
+/* ─── Print styles ───────────────────────────────────────────────────────── */
+@page {
+  size: letter;
+  margin: 1in;
+}
+
+@media print {
+  body { background: white; color: black; }
+  .no-print { display: none !important; }
+}
