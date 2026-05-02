@@ -245,8 +245,8 @@ function FormatButton({
       className={[
         "w-7 h-7 flex items-center justify-center rounded transition-colors disabled:opacity-40",
         active
-          ? "bg-orange-500/30 border border-orange-400 text-[var(--color-fg-primary)]"
-          : "border border-orange-500 text-[var(--color-fg-secondary)] hover:bg-orange-500/10 hover:text-[var(--color-fg-primary)]",
+          ? "bg-indigo-600/20 text-indigo-400"
+          : "text-[var(--color-fg-secondary)] hover:text-indigo-400 hover:bg-[var(--color-border-subtle)]",
       ].join(" ")}
     >
       {icon}
