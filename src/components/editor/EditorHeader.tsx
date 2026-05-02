@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
+  ChevronDown,
   Home,
   Plus,
   FolderOpen,
@@ -33,20 +34,41 @@ export default function EditorHeader() {
   const savedSlotLabel = useScriptForgeStore((s) => s.savedSlotLabel);
   const isVersionsModalOpen = useScriptForgeStore((s) => s.isVersionsModalOpen);
   const setIsVersionsModalOpen = useScriptForgeStore((s) => s.setIsVersionsModalOpen);
+  const activeProfile = useScriptForgeStore((s) => s.activeProfile);
+  const setActiveProfile = useScriptForgeStore((s) => s.setActiveProfile);
   const [creatingNew, setCreatingNew] = useState(false);
   const [openModalVisible, setOpenModalVisible] = useState(false);
+  const [profileMenuOpen, setProfileMenuOpen] = useState(false);
+  const profileMenuRef = useRef<HTMLDivElement>(null);
+
+  // Close profile dropdown on outside click
+  useEffect(() => {
+    if (!profileMenuOpen) return;
+    const handler = (e: MouseEvent) => {
+      if (profileMenuRef.current && !profileMenuRef.current.contains(e.target as Node)) {
+        setProfileMenuOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [profileMenuOpen]);
 
   const { dot, label: baseLabel } = STATUS_CONFIG[saveState];
   const label = saveState === "saved" && savedSlotLabel ? `Saved (${savedSlotLabel})` : baseLabel;
 
   async function handleNew() {
     if (creatingNew) return;
+    if (!activeProfile) { router.push("/"); return; }
     setCreatingNew(true);
     try {
       const res = await fetch("/api/scripts", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title: "Untitled", fountain: "" }),
+        body: JSON.stringify({
+          title: "Untitled",
+          fountain: "",
+          ownerProfileId: activeProfile.profileId,
+        }),
       });
       if (res.ok) {
         const data = (await res.json()) as ScriptMetadata;
@@ -55,6 +77,12 @@ export default function EditorHeader() {
     } finally {
       setCreatingNew(false);
     }
+  }
+
+  function handleSwitchProfile() {
+    setProfileMenuOpen(false);
+    setActiveProfile(null);
+    router.push("/");
   }
 
   return (
@@ -85,8 +113,42 @@ export default function EditorHeader() {
           </div>
         </div>
 
-        {/* Right: action buttons */}
+        {/* Right: profile indicator + action buttons */}
         <div className="flex items-center gap-0.5 shrink-0 ml-4">
+          {activeProfile && (
+            <div className="relative mr-1.5" ref={profileMenuRef}>
+              <button
+                onClick={() => setProfileMenuOpen((o) => !o)}
+                className="flex items-center gap-1 px-2.5 py-1.5 rounded text-[var(--color-fg-secondary)] hover:text-white text-[13px] font-sans transition-colors"
+              >
+                <span>{activeProfile.name}</span>
+                <ChevronDown size={12} />
+              </button>
+              {profileMenuOpen && (
+                <div className="absolute right-0 top-full mt-1 w-48 rounded-lg shadow-lg z-50 py-1"
+                  style={{ background: "#13131a", border: "1px solid #2a2a35" }}>
+                  <button
+                    onClick={handleSwitchProfile}
+                    className="w-full text-left px-4 py-2 text-[13px] font-sans transition-colors hover:text-white"
+                    style={{ color: "#9099a8" }}
+                    onMouseEnter={(e) => (e.currentTarget.style.background = "#1e1e28")}
+                    onMouseLeave={(e) => (e.currentTarget.style.background = "")}
+                  >
+                    Switch profile
+                  </button>
+                  <button
+                    onClick={() => { setProfileMenuOpen(false); console.log("Manage profiles"); }}
+                    className="w-full text-left px-4 py-2 text-[13px] font-sans transition-colors hover:text-white"
+                    style={{ color: "#9099a8" }}
+                    onMouseEnter={(e) => (e.currentTarget.style.background = "#1e1e28")}
+                    onMouseLeave={(e) => (e.currentTarget.style.background = "")}
+                  >
+                    Manage profiles
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
           <HeaderButton
             icon={<Plus size={14} />}
             label={creatingNew ? "Creating…" : "New"}

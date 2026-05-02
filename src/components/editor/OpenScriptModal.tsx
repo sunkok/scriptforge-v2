@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { X, FileText, Trash2 } from "lucide-react";
 import type { ScriptMetadata } from "@/lib/types";
 import { relativeTime } from "@/lib/relative-time";
+import { useScriptForgeStore } from "@/lib/store";
 
 interface Props {
   onClose: () => void;
@@ -13,6 +14,7 @@ interface Props {
 
 export default function OpenScriptModal({ onClose }: Props) {
   const router = useRouter();
+  const activeProfile = useScriptForgeStore((s) => s.activeProfile);
   const [scripts, setScripts] = useState<ScriptMetadata[] | null>(null);
   const [deleting, setDeleting] = useState<string | null>(null);
   const [mounted, setMounted] = useState(false);
@@ -21,11 +23,14 @@ export default function OpenScriptModal({ onClose }: Props) {
 
   useEffect(() => {
     fetchScripts();
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   function fetchScripts() {
     setScripts(null);
-    fetch("/api/scripts")
+    const url = activeProfile
+      ? `/api/scripts?profileId=${activeProfile.profileId}`
+      : "/api/scripts";
+    fetch(url)
       .then((r) => r.json())
       .then((data) => setScripts(data.scripts ?? []))
       .catch(() => setScripts([]));

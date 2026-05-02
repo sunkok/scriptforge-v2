@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { useEditor, EditorContent } from "@tiptap/react";
 import Document from "@tiptap/extension-document";
 import StarterKit from "@tiptap/starter-kit";
@@ -20,56 +21,9 @@ import { PaginationEngine } from "@/lib/pagination/engine";
 import { fountainToTiptap } from "@/lib/fountain/parser";
 import { relativeTime } from "@/lib/relative-time";
 import type { Annotation } from "@/lib/types";
+import { useScriptForgeStore } from "@/lib/store";
 
 const CustomDocument = Document.extend({ content: "page+" });
-const WRITER_NAME_KEY = "writer-name";
-
-// ─── writer name modal ────────────────────────────────────────────────────────
-
-function WriterNameModal({ onConfirm }: { onConfirm: (name: string) => void }) {
-  const [name, setName] = useState("");
-  const inputRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => { inputRef.current?.focus(); }, []);
-
-  const submit = () => {
-    const t = name.trim();
-    if (t) onConfirm(t);
-  };
-
-  return (
-    <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/60">
-      <div
-        className="max-w-sm w-full mx-4 px-8 py-8 rounded-xl"
-        style={{ background: "#13131a", border: "1px solid #2a2a35" }}
-      >
-        <p className="text-white text-[17px] font-bold font-sans mb-1">
-          What&apos;s your name?
-        </p>
-        <p className="mb-5 text-[13px] font-sans" style={{ color: "#6b6b76" }}>
-          Used to identify your replies.
-        </p>
-        <input
-          ref={inputRef}
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && submit()}
-          placeholder="Your name (e.g. Sun)"
-          className="w-full px-3 py-2 rounded-lg text-[14px] font-sans text-white focus:outline-none mb-4"
-          style={{ background: "#0f0f14", border: "1px solid #2a2a35" }}
-        />
-        <button
-          onClick={submit}
-          disabled={!name.trim()}
-          className="w-full py-2 rounded-lg text-[14px] font-semibold font-sans text-white disabled:opacity-40"
-          style={{ background: "#6366f1" }}
-        >
-          Continue
-        </button>
-      </div>
-    </div>
-  );
-}
 
 // ─── annotation card ──────────────────────────────────────────────────────────
 
@@ -448,22 +402,18 @@ export default function WriterAnnotationPanel({
   versionLabel: string;
   onClose: () => void;
 }) {
+  const router = useRouter();
+  const activeProfile = useScriptForgeStore((s) => s.activeProfile);
+  const writerName = activeProfile?.name ?? null;
+
   const [fountain, setFountain] = useState<string | null>(null);
   const [fountainLoading, setFountainLoading] = useState(true);
   const [annotations, setAnnotations] = useState<Annotation[]>([]);
-  const [writerName, setWriterName] = useState<string | null>(null);
-  const [nameModalOpen, setNameModalOpen] = useState(false);
-  const nameCallbackRef = useRef<(() => void) | null>(null);
   const [pulseCardId, setPulseCardId] = useState<string | null>(null);
   const [replyOpenId, setReplyOpenId] = useState<string | null>(null);
   const engineRef = useRef<PaginationEngine | null>(null);
   const [engine, setEngine] = useState<PaginationEngine | null>(null);
   const cardRefs = useRef<Map<string, HTMLElement>>(new Map());
-
-  useEffect(() => {
-    const stored = localStorage.getItem(WRITER_NAME_KEY);
-    if (stored) setWriterName(stored);
-  }, []);
 
   useEffect(() => {
     setFountainLoading(true);
@@ -571,20 +521,6 @@ export default function WriterAnnotationPanel({
     [editor]
   );
 
-  const requestName = (callback: () => void) => {
-    if (writerName) { callback(); return; }
-    nameCallbackRef.current = callback;
-    setNameModalOpen(true);
-  };
-
-  const handleNameConfirm = (name: string) => {
-    localStorage.setItem(WRITER_NAME_KEY, name);
-    setWriterName(name);
-    setNameModalOpen(false);
-    nameCallbackRef.current?.();
-    nameCallbackRef.current = null;
-  };
-
   // Keyboard close
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
@@ -652,10 +588,7 @@ export default function WriterAnnotationPanel({
                 <span style={{ color: "#9099a8" }}>{writerName}</span>
               </span>
               <button
-                onClick={() => {
-                  localStorage.removeItem(WRITER_NAME_KEY);
-                  setWriterName(null);
-                }}
+                onClick={() => { onClose(); router.push("/"); }}
                 className="underline hover:opacity-80"
                 style={{ color: "#6366f1" }}
               >
@@ -728,9 +661,7 @@ export default function WriterAnnotationPanel({
                       isPulsing={pulseCardId === ann.id}
                       onRefresh={refreshAnnotations}
                       onScrollToHighlight={scrollToHighlight}
-                      onReply={() =>
-                        requestName(() => setReplyOpenId(ann.id))
-                      }
+                      onReply={writerName ? () => setReplyOpenId(ann.id) : undefined}
                     />
 
                     {/* Nested replies */}
@@ -770,7 +701,6 @@ export default function WriterAnnotationPanel({
         </div>
       </div>
 
-      {nameModalOpen && <WriterNameModal onConfirm={handleNameConfirm} />}
     </div>
   );
 }

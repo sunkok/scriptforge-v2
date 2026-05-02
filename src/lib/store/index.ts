@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import type { ElementType } from "@/lib/editor/types";
-import type { AutosaveSnapshot, SaveState, ScriptTitleBlock, ShareRecord, VersionMetadata } from "@/lib/types";
+import type { AutosaveSnapshot, Profile, SaveState, ScriptTitleBlock, ShareRecord, VersionMetadata } from "@/lib/types";
 
 export type PaginationStatus = "idle" | "paginating" | "reconciling";
 
@@ -50,6 +50,11 @@ interface ScriptForgeState {
   // Share records (all scripts — filtered in UI by currentScriptId)
   shares: ShareRecord[];
   setShares: (shares: ShareRecord[]) => void;
+  // Active profile (persisted to localStorage)
+  activeProfile: Profile | null;
+  setActiveProfile: (profile: Profile | null) => void;
+  profiles: Profile[];
+  setProfiles: (profiles: Profile[]) => void;
 }
 
 export const useScriptForgeStore = create<ScriptForgeState>()((set) => ({
@@ -82,4 +87,14 @@ export const useScriptForgeStore = create<ScriptForgeState>()((set) => ({
   setSavedSlotLabel: (label) => set({ savedSlotLabel: label }),
   shares: [],
   setShares: (shares) => set({ shares }),
+  activeProfile: null,
+  setActiveProfile: (profile) => {
+    if (typeof window !== "undefined") {
+      if (profile) localStorage.setItem("activeProfileId", profile.profileId);
+      else localStorage.removeItem("activeProfileId");
+    }
+    set({ activeProfile: profile });
+  },
+  profiles: [],
+  setProfiles: (profiles) => set({ profiles }),
 }));

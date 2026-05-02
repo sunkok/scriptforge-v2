@@ -70,10 +70,12 @@ interface Props {
 }
 
 export default function ScreenplayEditor({ scriptId }: Props) {
+  const router = useRouter();
   const [engine, setEngine] = useState<PaginationEngine | null>(null);
   const [activePage, setActivePage] = useState(1);
   const [suggestState, setSuggestState] = useState<SuggestPopupState>(null);
   const [loadError, setLoadError] = useState<"not_found" | "failed" | null>(null);
+  const [ownerMismatch, setOwnerMismatch] = useState<{ ownerProfileId: string } | null>(null);
   const engineRef = useRef<PaginationEngine | null>(null);
   const autosaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -88,6 +90,9 @@ export default function ScreenplayEditor({ scriptId }: Props) {
   const setScriptMeta = useScriptForgeStore((s) => s.setScriptMeta);
   const setSaveState = useScriptForgeStore((s) => s.setSaveState);
   const setSavedSlotLabel = useScriptForgeStore((s) => s.setSavedSlotLabel);
+  const activeProfile = useScriptForgeStore((s) => s.activeProfile);
+  const setActiveProfile = useScriptForgeStore((s) => s.setActiveProfile);
+  const profiles = useScriptForgeStore((s) => s.profiles);
 
   // Stable refs so Tiptap callbacks always see current values.
   const scriptIdRef = useRef(scriptId);
@@ -213,8 +218,17 @@ export default function ScreenplayEditor({ scriptId }: Props) {
           scriptId: string;
           title: string;
           fountain: string;
+          ownerProfileId?: string;
         };
         if (cancelled) return;
+
+        // Ownership guard
+        const { activeProfile: profile } = useScriptForgeStore.getState();
+        if (data.ownerProfileId && profile && data.ownerProfileId !== profile.profileId) {
+          setOwnerMismatch({ ownerProfileId: data.ownerProfileId });
+          setSaveState("readonly");
+          return;
+        }
 
         const fountain = data.fountain ?? "";
         const tb = parseTitleBlock(fountain);
@@ -251,6 +265,48 @@ export default function ScreenplayEditor({ scriptId }: Props) {
     editor.commands.insertContent(text);
     setSuggestState(null);
   };
+
+  if (ownerMismatch) {
+    const ownerProfile = profiles.find((p) => p.profileId === ownerMismatch.ownerProfileId);
+    return (
+      <div className="h-screen flex flex-col items-center justify-center gap-6 bg-[#0f0f14]">
+        <div className="max-w-sm w-full mx-4 px-8 py-8 rounded-xl text-center"
+          style={{ background: "#13131a", border: "1px solid #2a2a35" }}>
+          <p className="text-white text-[17px] font-bold font-sans mb-2">
+            Wrong profile
+          </p>
+          <p className="text-[13px] font-sans mb-6" style={{ color: "#6b6b76" }}>
+            This script belongs to{" "}
+            <span style={{ color: "#c8cdd8" }}>
+              {ownerProfile?.name ?? "a different profile"}
+            </span>
+            .
+          </p>
+          <div className="flex flex-col gap-2">
+            {ownerProfile && (
+              <button
+                onClick={() => {
+                  setActiveProfile(ownerProfile);
+                  window.location.reload();
+                }}
+                className="w-full py-2 rounded-lg text-[14px] font-semibold font-sans text-white"
+                style={{ background: "#6366f1" }}
+              >
+                Switch to {ownerProfile.name}
+              </button>
+            )}
+            <button
+              onClick={() => router.push("/")}
+              className="w-full py-2 rounded-lg text-[14px] font-sans"
+              style={{ background: "#1e1e28", color: "#9099a8" }}
+            >
+              Back to home
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (loadError) {
     return (
