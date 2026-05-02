@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import {
+  Home,
   Plus,
   FolderOpen,
   History,
@@ -11,6 +12,7 @@ import {
 } from "lucide-react";
 import { useScriptForgeStore } from "@/lib/store";
 import type { ScriptMetadata } from "@/lib/types";
+import OpenScriptModal from "./OpenScriptModal";
 
 const STATUS_CONFIG = {
   saved:    { dot: "bg-green-500",  label: "Saved" },
@@ -28,6 +30,7 @@ export default function EditorHeader() {
   const wordCount = useScriptForgeStore((s) => s.wordCount);
   const saveState = useScriptForgeStore((s) => s.saveState);
   const [creatingNew, setCreatingNew] = useState(false);
+  const [openModalVisible, setOpenModalVisible] = useState(false);
 
   const { dot, label } = STATUS_CONFIG[saveState];
 
@@ -50,50 +53,68 @@ export default function EditorHeader() {
   }
 
   return (
-    <header className="flex items-center justify-between px-5 shrink-0 h-14 bg-[#0b0d11] border-b border-[var(--color-border-subtle)]">
-      <div className="flex flex-col justify-center min-w-0">
-        <span className="text-white font-bold text-[18px] leading-tight truncate">
-          {scriptTitle || "Untitled"}
-        </span>
-        <div className="flex items-center gap-0 text-[11px] text-[var(--color-fg-secondary)] leading-none mt-0.5">
-          <span className={`inline-block w-1.5 h-1.5 rounded-full ${dot} mr-1.5 shrink-0`} />
-          <span>{label}</span>
-          <span className="mx-1.5">·</span>
-          <span>~{pageCount} {pageCount === 1 ? "page" : "pages"}</span>
-          <span className="mx-1.5">·</span>
-          <span>{wordCount.toLocaleString()} words</span>
-        </div>
-      </div>
+    <>
+      <header className="flex items-center justify-between px-5 shrink-0 h-14 bg-[#0b0d11] border-b border-[var(--color-border-subtle)]">
+        {/* Left: home icon + title */}
+        <div className="flex items-center gap-3 min-w-0">
+          <button
+            onClick={() => router.push("/")}
+            className="shrink-0 p-1.5 -ml-1 rounded text-[var(--color-fg-secondary)] hover:text-indigo-400 transition-colors"
+            title="Home"
+          >
+            <Home size={16} />
+          </button>
 
-      <div className="flex items-center gap-0.5 shrink-0 ml-4">
-        <HeaderButton
-          icon={<Plus size={14} />}
-          label={creatingNew ? "Creating…" : "New"}
-          onClick={handleNew}
-          disabled={creatingNew}
-        />
-        <HeaderButton
-          icon={<FolderOpen size={14} />}
-          label="Open"
-          onClick={() => router.push("/")}
-        />
-        <HeaderButton
-          icon={<History size={14} />}
-          label="Versions"
-          onClick={() => console.log("Versions clicked")}
-        />
-        <HeaderButton
-          icon={<SlidersHorizontal size={14} />}
-          label="Properties"
-          onClick={() => console.log("Properties clicked")}
-        />
-        <HeaderButton
-          icon={<Printer size={14} />}
-          label="Print"
-          onClick={() => console.log("Print clicked")}
-        />
-      </div>
-    </header>
+          <div className="flex flex-col justify-center min-w-0">
+            <span className="text-white font-bold text-[18px] leading-tight truncate">
+              {scriptTitle || "Untitled"}
+            </span>
+            <div className="flex items-center gap-0 text-[11px] text-[var(--color-fg-secondary)] leading-none mt-0.5">
+              <span className={`inline-block w-1.5 h-1.5 rounded-full ${dot} mr-1.5 shrink-0`} />
+              <span>{label}</span>
+              <span className="mx-1.5">·</span>
+              <span>~{pageCount} {pageCount === 1 ? "page" : "pages"}</span>
+              <span className="mx-1.5">·</span>
+              <span>{wordCount.toLocaleString()} words</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Right: action buttons */}
+        <div className="flex items-center gap-0.5 shrink-0 ml-4">
+          <HeaderButton
+            icon={<Plus size={14} />}
+            label={creatingNew ? "Creating…" : "New"}
+            onClick={handleNew}
+            disabled={creatingNew}
+          />
+          <HeaderButton
+            icon={<FolderOpen size={14} />}
+            label="Open"
+            onClick={() => setOpenModalVisible(true)}
+          />
+          <HeaderButton
+            icon={<History size={14} />}
+            label="Versions"
+            onClick={() => console.log("Versions clicked")}
+          />
+          <HeaderButton
+            icon={<SlidersHorizontal size={14} />}
+            label="Properties"
+            onClick={() => console.log("Properties clicked")}
+          />
+          <HeaderButton
+            icon={<Printer size={14} />}
+            label="Print"
+            onClick={() => console.log("Print clicked")}
+          />
+        </div>
+      </header>
+
+      {openModalVisible && (
+        <OpenScriptModal onClose={() => setOpenModalVisible(false)} />
+      )}
+    </>
   );
 }
 
