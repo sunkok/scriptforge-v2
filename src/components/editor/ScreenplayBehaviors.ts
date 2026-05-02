@@ -4,8 +4,9 @@ import { isElementType, type ElementType } from "@/lib/editor/types";
 
 const behaviorPluginKey = new PluginKey("screenplayBehaviors");
 
-// See docs/writing-flow.md for the reasoning behind these tables.
+// See docs/writing-flow.md for the full rationale behind these tables.
 
+// Tab: creates a NEW LINE below with the target type.
 const TAB_MAP: Record<ElementType, ElementType> = {
   scene_heading: "action",
   action:        "character",
@@ -15,15 +16,18 @@ const TAB_MAP: Record<ElementType, ElementType> = {
   transition:    "scene_heading",
 };
 
+// Shift+Tab: RELABELS the current line in place (no new line).
 const SHIFT_TAB_MAP: Record<ElementType, ElementType> = {
   scene_heading: "transition",
   action:        "scene_heading",
   character:     "action",
   parenthetical: "character",
-  dialogue:      "character", // may be overridden to "parenthetical" if prev block qualifies
+  dialogue:      "character",
   transition:    "dialogue",
 };
 
+// Enter: creates a NEW LINE below with the target type.
+// Empty Action/Character are handled separately before this table is consulted.
 const ENTER_MAP: Record<ElementType, ElementType> = {
   scene_heading: "action",
   action:        "action",
@@ -41,44 +45,37 @@ export const ScreenplayBehaviors = Extension.create({
 
   addKeyboardShortcuts() {
     return {
+      // Tab: done here → create new line below for next likely element.
       Tab: ({ editor }) => {
-        const currentType = editor.state.selection.$anchor.parent.type.name;
-        if (!isElementType(currentType)) return false;
-        return editor.commands.setNode(TAB_MAP[currentType]);
-      },
-
-      "Shift-Tab": ({ editor }) => {
         const { $anchor } = editor.state.selection;
         const currentType = $anchor.parent.type.name;
         if (!isElementType(currentType)) return false;
 
-        let targetType = SHIFT_TAB_MAP[currentType];
+        const targetType = TAB_MAP[currentType];
 
-        // From Dialogue: go to Parenthetical only if the immediately preceding
-        // sibling block within the same page is a non-empty Parenthetical.
-        if (currentType === "dialogue") {
-          const parentOffset = $anchor.start(-1); // start of the page node
-          const nodeStart = $anchor.before();      // start of the dialogue node
-          const relPos = nodeStart - parentOffset;
+        editor.commands.splitBlock();
+        editor.commands.setNode(targetType);
 
-          const pageNode = $anchor.node(-1);
-          let prevNode: typeof pageNode | null = null;
-          pageNode.forEach((child, offset) => {
-            if (offset + child.nodeSize === relPos) prevNode = child;
-          });
-
-          if (
-            prevNode &&
-            (prevNode as typeof pageNode).type.name === "parenthetical" &&
-            (prevNode as typeof pageNode).textContent.trim() !== ""
-          ) {
-            targetType = "parenthetical";
-          }
+        // Character → Parenthetical: pre-fill "()" and place cursor between the parens.
+        if (currentType === "character") {
+          editor.commands.insertContent("()");
+          const pos = editor.state.selection.$anchor.pos - 1;
+          editor.view.dispatch(
+            editor.state.tr.setSelection(TextSelection.create(editor.state.doc, pos))
+          );
         }
 
-        return editor.commands.setNode(targetType);
+        return true;
       },
 
+      // Shift+Tab: relabel CURRENT line to a different type — no new line.
+      "Shift-Tab": ({ editor }) => {
+        const currentType = editor.state.selection.$anchor.parent.type.name;
+        if (!isElementType(currentType)) return false;
+        return editor.commands.setNode(SHIFT_TAB_MAP[currentType]);
+      },
+
+      // Enter: smart empty-state first, then standard forward progression.
       Enter: ({ editor }) => {
         const { $anchor } = editor.state.selection;
         const currentType = $anchor.parent.type.name;
@@ -86,22 +83,22 @@ export const ScreenplayBehaviors = Extension.create({
 
         const isEmpty = $anchor.parent.textContent === "";
 
-        // Empty Action → Character (start dialogue exchange)
+        // Empty Action → relabel to Character on the SAME line (no new line).
         if (currentType === "action" && isEmpty) {
           return editor.commands.setNode("character");
         }
-        // Empty Character → Action (cancel speaker, return to description)
+        // Empty Character → relabel to Action on the SAME line (no new line).
         if (currentType === "character" && isEmpty) {
           return editor.commands.setNode("action");
         }
 
-        const nextType = ENTER_MAP[currentType];
+        // Standard case: create new line with the target type.
         // Chain tracks stale positions after splitBlock; run sequentially instead.
         editor.commands.splitBlock();
-        return editor.commands.setNode(nextType);
+        return editor.commands.setNode(ENTER_MAP[currentType]);
       },
 
-      // Cmd/Ctrl+1–6: set element type directly without Tab cycling.
+      // Cmd/Ctrl+1–6: relabel current line to a specific type directly.
       "Mod-1": ({ editor }) => {
         if (!isElementType(editor.state.selection.$anchor.parent.type.name)) return false;
         return editor.commands.setNode("scene_heading");

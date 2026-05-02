@@ -17,22 +17,32 @@ Industry reference: Final Draft, Highland, Arc Studio Pro all use intelligent ne
 5. Dialogue — what the character says
 6. Transition — CUT TO:, FADE OUT., etc.
 
-## ENTER — "Continue forward, default next thing"
+## Key Distinction: Tab vs Shift+Tab
 
-| In | Pressing Enter creates |
+- **Tab** = "I'm done here, create a NEW LINE below for the next likely element"
+- **Shift+Tab** = "Wait, this CURRENT line should actually be a different type" — relabel current line in place
+- **Enter** = "I'm done here, create a NEW LINE below for default-next-thing"
+
+Tab and Enter both create new lines. The difference: Enter goes to the most-conventional next element. Tab goes to the most-likely-but-context-aware-alternative element.
+
+## ENTER — Continue forward (creates new line)
+
+| In | Pressing Enter creates new line as |
 |---|---|
 | Scene Heading | Action |
 | Action (with text) | Action (continue describing) |
-| Action (empty) | Character (smart default — starting a dialogue exchange) |
+| Action (empty) | Character (smart default — convert empty Action to Character on same line) |
 | Character (with text) | Dialogue |
-| Character (empty) | Action (back out to description) |
+| Character (empty) | Action (cancel — convert empty Character to Action on same line) |
 | Parenthetical | Dialogue |
 | Dialogue | Action |
 | Transition | Scene Heading |
 
-## TAB — "Jump to most likely next element"
+Note: empty Action/Character cases CONVERT the current line (no new line created), since user clearly didn't want that type.
 
-| In | Pressing Tab jumps to |
+## TAB — Create new line for likely next element (creates new line)
+
+| In | Pressing Tab creates new line as |
 |---|---|
 | Scene Heading | Action |
 | Action | Character |
@@ -41,20 +51,26 @@ Industry reference: Final Draft, Highland, Arc Studio Pro all use intelligent ne
 | Dialogue | Character (next speaker, same scene) |
 | Transition | Scene Heading |
 
-## SHIFT+TAB — "Jump backward to likely previous element"
+Example:
+- User types "JOHN" (Character mode), presses Tab
+- New line below appears in Parenthetical mode (already showing "()" with cursor between parens)
+- User types "whispered", presses Enter
+- New line below in Dialogue mode for John's actual line
 
-| In | Pressing Shift+Tab jumps to |
+## SHIFT+TAB — Relabel current line (no new line)
+
+| In | Shift+Tab changes current line to |
 |---|---|
 | Scene Heading | Transition |
 | Action | Scene Heading |
 | Character | Action |
 | Parenthetical | Character |
-| Dialogue | Parenthetical (if non-empty parenthetical exists immediately above in the same block), else Character |
+| Dialogue | Character |
 | Transition | Dialogue |
 
-## Cmd+1 through Cmd+6 — Direct selection
+This is for when you realize "this line shouldn't be this type, let me fix it."
 
-Same as before — pressing Cmd+N converts the current line to that element type regardless of context.
+## Cmd+1 through Cmd+6 — Direct selection (relabels current line)
 
 - Cmd+1: Scene Heading
 - Cmd+2: Action
@@ -63,25 +79,28 @@ Same as before — pressing Cmd+N converts the current line to that element type
 - Cmd+5: Parenthetical
 - Cmd+6: Transition
 
-## Smart Defaults (additional)
+Same as Shift+Tab in spirit — relabels current line to a specific type.
 
-- Empty Action + Enter → Character (starts dialogue exchange)
-- Empty Character + Enter → Action (cancels speaker, returns to description)
-- Both behaviors trigger only when the line is empty (no text, no whitespace)
+## Smart Defaults
+
+- Empty Action + Enter → converts current line to Character (no new line)
+- Empty Character + Enter → converts current line to Action (no new line)
+- Tab on Character → creates new Parenthetical line, cursor between auto-inserted "()"
+- Tab on any other element → creates new line of target type, cursor at start
 
 ## Reasoning Behind Choices
 
-**Why Tab from Action goes to Character (not Scene Heading):** After describing action, the most common next element is a character speaking. New scene headings are less frequent than character cues in scene-heavy screenplays. Tab should optimize for the most common case.
+**Why Tab from Action creates a new Character line:** After describing action, the most common next element is a character speaking. Enter on Action continues Action. Tab on Action says "done with action, someone's about to speak."
 
-**Why Tab from Character goes to Parenthetical (not Dialogue):** Parenthetical is the rarer-but-relevant option. Enter from Character already goes to Dialogue (the common case). Tab offers the alternative path. This avoids dead-Tab-equivalent-to-Enter redundancy.
+**Why Tab from Character creates a new Parenthetical line:** Enter from Character already goes to Dialogue (the common case). Tab offers the alternative parenthetical path. The new Parenthetical line is pre-filled with "()" and cursor between, ready for typing.
 
-**Why Shift+Tab from Dialogue smart-checks for Parenthetical:** Within a single character block (Character → Parenthetical → Dialogue), Shift+Tab from Dialogue should respect the actual structure. If Parenthetical is present, Shift+Tab goes there. If absent, it skips to Character.
+**Why Shift+Tab relabels rather than navigates:** Going to a previous existing line is what arrow keys do. Shift+Tab is for fixing the current line's type without retyping its content.
 
 ## Future: Tutor Mode
 
 When tutor mode is implemented:
-- On first launch (or when enabled), show contextual hints based on current element
-- E.g., when cursor enters a Character element, briefly show: "Press Enter for dialogue, Tab for parenthetical, Shift+Tab to go back to action"
+- Show contextual hints based on current element
+- E.g., when cursor enters a Character element, briefly show: "Press Enter for dialogue, Tab for parenthetical, Shift+Tab to relabel as action"
 - Hints appear as small unobtrusive overlays, dismiss after 3 seconds or on any keypress
 - Hints disable after the user has made N successful element transitions (learned the system)
 - Hints can be re-enabled in settings
