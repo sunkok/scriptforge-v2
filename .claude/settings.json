@@ -8,7 +8,8 @@
       "Bash(python3 -c \"from PIL import Image; img = Image.open\\('/Users/tiltthewater/Documents/scriptforge-v2/public/scriptforge-logo.png'\\); print\\(img.size\\)\")",
       "Bash(sips -g pixelWidth -g pixelHeight /Users/tiltthewater/Documents/scriptforge-v2/public/scriptforge-logo.png)",
       "Bash(npm run *)",
-      "Bash(curl -s http://localhost:3000/api/scripts)"
+      "Bash(curl -s http://localhost:3000/api/scripts)",
+      "Bash(node -e ' *)"
     ],
     "additionalDirectories": [
       "/Users/tiltthewater/Documents/scriptforge-v2/src/app/api/scripts"
