@@ -91,7 +91,7 @@ export default function EditorHeader() {
         {/* Left: home icon + title */}
         <div className="flex items-center gap-3 min-w-0">
           <button
-            onClick={() => router.push("/")}
+            onClick={() => { setActiveProfile(null); router.push("/"); }}
             className="shrink-0 p-1.5 -ml-1 rounded text-[var(--color-fg-secondary)] hover:text-indigo-400 transition-colors"
             title="Home"
           >

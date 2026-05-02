@@ -296,7 +296,7 @@ export default function ScreenplayEditor({ scriptId }: Props) {
               </button>
             )}
             <button
-              onClick={() => router.push("/")}
+              onClick={() => { setActiveProfile(null); router.push("/"); }}
               className="w-full py-2 rounded-lg text-[14px] font-sans"
               style={{ background: "#1e1e28", color: "#9099a8" }}
             >

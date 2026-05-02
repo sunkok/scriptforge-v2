@@ -257,10 +257,18 @@ export default function ScriptLauncher() {
                 </button>
               </div>
             ) : (
-              <button
+              <div
                 key={profile.profileId}
+                role="button"
+                tabIndex={0}
                 onClick={() => setActiveProfile(profile)}
-                className="w-full flex items-center gap-3 px-5 py-3 hover:bg-[var(--color-border-subtle)] transition-colors group"
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    setActiveProfile(profile);
+                  }
+                }}
+                className="w-full flex items-center gap-3 px-5 py-3 hover:bg-[var(--color-border-subtle)] transition-colors group cursor-pointer"
               >
                 <User
                   size={15}
@@ -288,7 +296,7 @@ export default function ScriptLauncher() {
                   size={14}
                   className="text-[var(--color-fg-secondary)] shrink-0 group-hover:text-indigo-400 transition-colors"
                 />
-              </button>
+              </div>
             )
           )}
         </>

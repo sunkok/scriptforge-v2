@@ -117,11 +117,15 @@ function AnnotationCard({
     <div
       style={{
         background: isPulsing ? "rgba(99,102,241,0.1)" : "#1a1a24",
-        border: `1px solid ${isPulsing ? "rgba(99,102,241,0.35)" : "#2a2a35"}`,
         borderRadius: 8,
         padding: "12px 14px",
         marginLeft: isReply ? 16 : 0,
-        borderLeft: isReply ? "2px solid #3a3a5a" : undefined,
+        borderTop: `1px solid ${isPulsing ? "rgba(99,102,241,0.35)" : "#2a2a35"}`,
+        borderRight: `1px solid ${isPulsing ? "rgba(99,102,241,0.35)" : "#2a2a35"}`,
+        borderBottom: `1px solid ${isPulsing ? "rgba(99,102,241,0.35)" : "#2a2a35"}`,
+        borderLeft: isReply
+          ? "2px solid #3a3a5a"
+          : `1px solid ${isPulsing ? "rgba(99,102,241,0.35)" : "#2a2a35"}`,
         transition: "background 0.5s ease, border-color 0.5s ease",
       }}
     >
