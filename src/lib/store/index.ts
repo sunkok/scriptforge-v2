@@ -29,6 +29,8 @@ interface ScriptForgeState {
   // Active script identity and persistence state
   currentScriptId: string | null;
   setCurrentScriptId: (id: string | null) => void;
+  scriptTitle: string;
+  setScriptTitle: (title: string) => void;
   saveState: SaveState;
   setSaveState: (state: SaveState) => void;
 }
@@ -47,6 +49,8 @@ export const useScriptForgeStore = create<ScriptForgeState>()((set) => ({
     set((s) => ({ scriptMeta: { ...s.scriptMeta, ...meta } })),
   currentScriptId: null,
   setCurrentScriptId: (id) => set({ currentScriptId: id }),
+  scriptTitle: "Untitled",
+  setScriptTitle: (title) => set({ scriptTitle: title }),
   saveState: "saved",
   setSaveState: (state) => set({ saveState: state }),
 }));
