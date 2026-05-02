@@ -15,6 +15,7 @@ import { useScriptForgeStore } from "@/lib/store";
 import type { ScriptMetadata } from "@/lib/types";
 import OpenScriptModal from "./OpenScriptModal";
 import VersionsModal from "./VersionsModal";
+import PropertiesDialog from "./PropertiesDialog";
 import NameInputDialog from "@/components/ui/NameInputDialog";
 import UnsavedGuardDialog from "@/components/ui/UnsavedGuardDialog";
 
@@ -44,6 +45,7 @@ export default function EditorHeader() {
 
   const [openModalVisible, setOpenModalVisible] = useState(false);
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
+  const [propertiesOpen, setPropertiesOpen] = useState(false);
   const profileMenuRef = useRef<HTMLDivElement>(null);
 
   // New script dialog
@@ -161,6 +163,27 @@ export default function EditorHeader() {
     }
   }
 
+  async function handlePrint() {
+    const { saveState: current, currentScriptId: id, requestSave } = useScriptForgeStore.getState();
+    if (!id) return;
+    if (current === "unsaved" || current === "error") {
+      if (requestSave) {
+        try { await requestSave(); } catch { /* proceed anyway */ }
+      }
+    } else if (current === "saving") {
+      await new Promise<void>((resolve) => {
+        const unsub = useScriptForgeStore.subscribe((state) => {
+          if (state.saveState === "saved" || state.saveState === "error") {
+            unsub();
+            resolve();
+          }
+        });
+        setTimeout(() => { unsub(); resolve(); }, 5000);
+      });
+    }
+    window.open(`/print?id=${id}`, "_blank");
+  }
+
   return (
     <>
       <header className="flex items-center justify-between px-5 shrink-0 h-14 bg-[#0b0d11] border-b border-[var(--color-border-subtle)]">
@@ -266,12 +289,12 @@ export default function EditorHeader() {
           <HeaderButton
             icon={<SlidersHorizontal size={14} />}
             label="Properties"
-            onClick={() => console.log("Properties clicked")}
+            onClick={() => setPropertiesOpen(true)}
           />
           <HeaderButton
             icon={<Printer size={14} />}
             label="Print"
-            onClick={() => console.log("Print clicked")}
+            onClick={() => void handlePrint()}
           />
         </div>
       </header>
@@ -299,6 +322,9 @@ export default function EditorHeader() {
           onDiscard={() => { const a = pendingAction; setPendingAction(null); a.fn(); }}
           onCancel={() => setPendingAction(null)}
         />
+      )}
+      {propertiesOpen && (
+        <PropertiesDialog onClose={() => setPropertiesOpen(false)} />
       )}
     </>
   );

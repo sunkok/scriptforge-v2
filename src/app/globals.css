@@ -58,6 +58,7 @@ body {
   box-sizing: border-box;
   border-radius: 2px;
   overflow: visible;
+  position: relative;
 }
 
 /* ─── Tiptap editor reset ────────────────────────────────────────────────── */
@@ -148,11 +149,33 @@ body {
 
 /* ─── Print styles ───────────────────────────────────────────────────────── */
 @page {
-  size: letter;
-  margin: 1in;
+  size: 8.5in 11in;
+  margin: 0; /* page-sheet manages its own padding */
 }
 
 @media print {
-  body { background: white; color: black; }
+  body { background: white !important; color: black; }
   .no-print { display: none !important; }
+
+  /* Each page sheet fills exactly one printed page */
+  .page-sheet {
+    margin: 0 !important;
+    box-shadow: none !important;
+    border-radius: 0 !important;
+    page-break-after: always !important;
+    break-after: page !important;
+  }
+
+  /* Title page also fills one printed page */
+  .print-title-page {
+    margin: 0 !important;
+    page-break-after: always !important;
+    break-after: page !important;
+  }
+
+  /* Strip annotation highlights */
+  .annotation-highlight {
+    background-color: transparent !important;
+    border-bottom: none !important;
+  }
 }
