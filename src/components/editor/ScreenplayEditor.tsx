@@ -19,6 +19,7 @@ import {
 } from "@/lib/editor/nodes";
 import { PaginationEngine } from "@/lib/pagination/engine";
 import { PaginationEngineContext } from "./PaginationContext";
+import { History } from "./HistoryExtension";
 import { useScriptForgeStore } from "@/lib/store";
 import SuggestPopup, { type SuggestPopupState } from "./SuggestPopup";
 import EditorHeader from "./EditorHeader";
@@ -106,6 +107,7 @@ export default function ScreenplayEditor({ scriptId }: Props) {
       Parenthetical,
       Transition,
       ScreenplayBehaviors,
+      History,
       Placeholder.configure({
         showOnlyCurrent: false,
         placeholder: ({ node }) => PLACEHOLDERS[node.type.name] ?? "",

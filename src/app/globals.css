@@ -76,47 +76,44 @@ body {
   white-space: pre-wrap;
 }
 
-/* First element on a page never gets a leading top margin */
-[data-element-type]:first-child {
-  margin-top: 0;
-}
-
 /* ─── Scene heading ──────────────────────────────────────────────────────── */
 [data-element-type="scene_heading"] {
   font-weight: 700;
   text-transform: uppercase;
-  margin-top: 1em;
+  margin-bottom: 1em;
 }
 
 /* ─── Action ─────────────────────────────────────────────────────────────── */
 [data-element-type="action"] {
-  /* full content width, no extra indent */
+  margin-bottom: 1em;
 }
 
 /* ─── Character — 2.0in indent from content-left ─────────────────────────── */
 [data-element-type="character"] {
   margin-left: 2.0in;
   text-transform: uppercase;
-  margin-top: 1em;
+  /* No bottom margin — dialogue follows directly */
 }
 
 /* ─── Dialogue — 1.0in indent, 3.5in max-width ───────────────────────────── */
 [data-element-type="dialogue"] {
   margin-left: 1.0in;
   max-width: 3.5in;
+  margin-bottom: 1em;
 }
 
 /* ─── Parenthetical — 1.5in indent, 2in max-width ────────────────────────── */
 [data-element-type="parenthetical"] {
   margin-left: 1.5in;
   max-width: 2in;
+  /* No bottom margin — dialogue follows directly */
 }
 
 /* ─── Transition — right-aligned within content area ─────────────────────── */
 [data-element-type="transition"] {
   text-align: right;
   text-transform: uppercase;
-  margin-top: 1em;
+  margin-bottom: 1em;
 }
 
 /* ─── Placeholder ────────────────────────────────────────────────────────── */

@@ -1,6 +1,11 @@
 import { Fountain } from "fountain-js";
 import type { JSONContent } from "@tiptap/core";
 
+// fountain-js misses some transition patterns (e.g. "TIME CUT:"). Post-pass
+// detects action/scene_heading nodes whose text looks like a transition.
+const TRANSITION_RE =
+  /^(FADE\s+(IN|OUT|TO\s+BLACK)|CUT\s+TO(\s+BLACK)?|DISSOLVE\s+TO|SMASH\s+CUT\s+TO|MATCH\s+CUT\s+TO|TIME\s+CUT)[:.!]?$/i;
+
 const TOKEN_TYPE_MAP: Record<string, string> = {
   scene_heading: "scene_heading",
   "scene-heading": "scene_heading", // defensive: handle either separator
@@ -44,6 +49,14 @@ export function fountainToTiptap(fountainText: string): JSONContent {
       type: nodeType,
       content: [{ type: "text", text }],
     });
+  }
+
+  // Post-pass: fix transitions fountain-js doesn't recognize (e.g. "TIME CUT:")
+  for (const node of nodes) {
+    if (node.type === "action" || node.type === "scene_heading") {
+      const text = node.content?.[0]?.text ?? "";
+      if (TRANSITION_RE.test(text)) node.type = "transition";
+    }
   }
 
   if (nodes.length === 0) return EMPTY_DOC;
