@@ -30,12 +30,14 @@ export default function EditorHeader() {
   const pageCount = useScriptForgeStore((s) => s.pageCount);
   const wordCount = useScriptForgeStore((s) => s.wordCount);
   const saveState = useScriptForgeStore((s) => s.saveState);
+  const savedSlotLabel = useScriptForgeStore((s) => s.savedSlotLabel);
   const isVersionsModalOpen = useScriptForgeStore((s) => s.isVersionsModalOpen);
   const setIsVersionsModalOpen = useScriptForgeStore((s) => s.setIsVersionsModalOpen);
   const [creatingNew, setCreatingNew] = useState(false);
   const [openModalVisible, setOpenModalVisible] = useState(false);
 
-  const { dot, label } = STATUS_CONFIG[saveState];
+  const { dot, label: baseLabel } = STATUS_CONFIG[saveState];
+  const label = saveState === "saved" && savedSlotLabel ? `Saved (${savedSlotLabel})` : baseLabel;
 
   async function handleNew() {
     if (creatingNew) return;

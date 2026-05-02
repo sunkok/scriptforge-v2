@@ -45,6 +45,8 @@ export async function PUT(request: NextRequest, ctx: Ctx) {
     return Response.json({ error: "Invalid script ID" }, { status: 400 });
   }
 
+  const isAutosave = request.nextUrl.searchParams.get("autosave") === "true";
+
   try {
     const exists = await objectExists(`scripts/${scriptId}/metadata.json`);
     if (!exists)
@@ -118,7 +120,27 @@ export async function PUT(request: NextRequest, ctx: Ctx) {
     await Promise.all(writes);
     await upsertScript(meta);
 
-    return Response.json(meta);
+    // Autosave snapshot (throttled — may return null).
+    let autosaveSnapshot = null;
+    if (isAutosave && fountain !== null) {
+      const { createHash } = await import("crypto");
+      const { recordAutosave } = await import("@/lib/s3/autosave-index");
+      const fountainSha256 = createHash("sha256").update(fountain).digest("hex");
+      const snapshot = await recordAutosave(scriptId, fountainSha256);
+      if (snapshot) {
+        await putObject(
+          `scripts/${scriptId}/autosaves/${snapshot.date}/${snapshot.slot}.fountain`,
+          fountain,
+          "text/plain"
+        );
+        autosaveSnapshot = snapshot;
+        console.log(`[autosave] script=${scriptId} SLOT_${snapshot.slot}`);
+      } else {
+        console.log(`[autosave] script=${scriptId} THROTTLED`);
+      }
+    }
+
+    return Response.json({ ...meta, ...(isAutosave ? { autosaveSnapshot } : {}) });
   } catch (err) {
     console.error("PUT /api/scripts/[scriptId]", err);
     return Response.json({ error: "Failed to save script" }, { status: 500 });

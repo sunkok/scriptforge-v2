@@ -87,12 +87,15 @@ export default function ScreenplayEditor({ scriptId }: Props) {
   const setTitleBlock = useScriptForgeStore((s) => s.setTitleBlock);
   const setScriptMeta = useScriptForgeStore((s) => s.setScriptMeta);
   const setSaveState = useScriptForgeStore((s) => s.setSaveState);
+  const setSavedSlotLabel = useScriptForgeStore((s) => s.setSavedSlotLabel);
 
   // Stable refs so Tiptap callbacks always see current values.
   const scriptIdRef = useRef(scriptId);
   const setSaveStateRef = useRef(setSaveState);
+  const setSavedSlotLabelRef = useRef(setSavedSlotLabel);
   scriptIdRef.current = scriptId;
   setSaveStateRef.current = setSaveState;
+  setSavedSlotLabelRef.current = setSavedSlotLabel;
 
   const editor = useEditor({
     extensions: [
@@ -127,7 +130,7 @@ export default function ScreenplayEditor({ scriptId }: Props) {
       engineRef.current = null;
     },
 
-    onUpdate({ editor }) {
+    onUpdate({ editor, transaction }) {
       let count = 0;
       editor.state.doc.forEach((node) => {
         if (node.type.name === "page") count++;
@@ -136,6 +139,10 @@ export default function ScreenplayEditor({ scriptId }: Props) {
       const words = editor.getText().split(/\s+/).filter(Boolean).length;
       setWordCount(words);
       setSuggestState(getSuggestState(editor));
+      const updatedTypeName = editor.state.selection.$anchor.parent.type.name;
+      setCurrentElementType(isElementType(updatedTypeName) ? updatedTypeName : null);
+
+      if (transaction.getMeta("pagination")) return;
 
       const currentId = scriptIdRef.current;
       if (!currentId) return;
@@ -148,12 +155,17 @@ export default function ScreenplayEditor({ scriptId }: Props) {
         const fountain = tiptapToFountain(editor.state.doc.toJSON(), titleBlock);
         setSaveStateRef.current("saving");
         try {
-          const res = await fetch(`/api/scripts/${currentId}`, {
+          const res = await fetch(`/api/scripts/${currentId}?autosave=true`, {
             method: "PUT",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ fountain }),
           });
           if (res.ok) {
+            const data = (await res.json()) as { autosaveSnapshot?: { slot: number } | null };
+            if (data.autosaveSnapshot) {
+              setSavedSlotLabelRef.current(`Slot ${data.autosaveSnapshot.slot}`);
+              setTimeout(() => setSavedSlotLabelRef.current(null), 2000);
+            }
             setSaveStateRef.current("saved");
           } else {
             console.error("autosave failed", res.status);

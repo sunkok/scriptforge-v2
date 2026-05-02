@@ -42,3 +42,15 @@ export interface VersionsIndex {
   scriptId: string;
   versions: VersionMetadata[];
 }
+
+export type AutosaveSnapshot = {
+  date: string;       // "YYYY-MM-DD" UTC
+  slot: 1 | 2 | 3;
+  createdAt: string;  // ISO datetime
+  fountainSha256: string;
+};
+
+export type AutosavesIndex = {
+  scriptId: string;
+  snapshots: AutosaveSnapshot[];
+};
