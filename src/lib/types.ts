@@ -27,3 +27,18 @@ export type SaveState =
   | "error"
   | "loading"
   | "readonly";
+
+export interface VersionMetadata {
+  versionId: string;
+  scriptId: string;
+  label: string;
+  createdAt: string;
+  fountainSha256: string;
+  pageCount?: number;
+  wordCount?: number;
+}
+
+export interface VersionsIndex {
+  scriptId: string;
+  versions: VersionMetadata[];
+}
