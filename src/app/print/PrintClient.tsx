@@ -55,18 +55,8 @@ function TitlePage({ titleBlock, scriptTitle }: TitlePageProps) {
 
   return (
     <div
-      className="print-title-page"
-      style={{
-        width: "8.5in",
-        height: "11in",
-        background: "#ffffff",
-        margin: "40px auto",
-        padding: "1in 1in 1in 1.5in",
-        boxSizing: "border-box",
-        display: "flex",
-        flexDirection: "column",
-        position: "relative",
-      }}
+      className="page-sheet print-title-page"
+      style={{ display: "flex", flexDirection: "column" }}
     >
       {/* Upper spacer */}
       <div style={{ flex: 2 }} />
@@ -309,7 +299,7 @@ export default function PrintClient() {
 
   // ─── Main render ──────────────────────────────────────────────────────────
   return (
-    <div style={{ background: "white", minHeight: "100vh" }}>
+    <div className="print-view" style={{ background: "white", minHeight: "100vh" }}>
       {/* Screen-only control bar */}
       <div
         className="no-print"
