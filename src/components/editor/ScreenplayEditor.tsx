@@ -92,6 +92,7 @@ export default function ScreenplayEditor({ scriptId }: Props) {
   const setSaveState = useScriptForgeStore((s) => s.setSaveState);
   const setSavedSlotLabel = useScriptForgeStore((s) => s.setSavedSlotLabel);
   const setRequestSave = useScriptForgeStore((s) => s.setRequestSave);
+  const setRequestRestore = useScriptForgeStore((s) => s.setRequestRestore);
   const activeProfile = useScriptForgeStore((s) => s.activeProfile);
   const setActiveProfile = useScriptForgeStore((s) => s.setActiveProfile);
   const profiles = useScriptForgeStore((s) => s.profiles);
@@ -298,6 +299,27 @@ export default function ScreenplayEditor({ scriptId }: Props) {
     setRequestSave(save);
     return () => { setRequestSave(null); };
   }, [editor, setRequestSave]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Register restore callback so VersionsModal can reload editor content.
+  useEffect(() => {
+    if (!editor) return;
+    const restore = (fountain: string) => {
+      const tb = parseTitleBlock(fountain);
+      setTitleBlock(tb);
+      if (tb) {
+        setScriptMeta({
+          title: tb.title ?? "",
+          author: tb.author ?? "",
+          contact: tb.contact ?? "",
+          draftLabel: tb.draft ?? "",
+        });
+      }
+      editor.commands.setContent(fountainToTiptap(fountain));
+      setSaveState("saved");
+    };
+    setRequestRestore(restore);
+    return () => { setRequestRestore(null); };
+  }, [editor, setRequestRestore]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleSuggestInsert = (text: string) => {
     if (!editor) return;

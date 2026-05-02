@@ -2,11 +2,12 @@
 
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { X, Copy, Check } from "lucide-react";
+import { X, Copy, Check, Eye, RotateCcw } from "lucide-react";
 import { useScriptForgeStore } from "@/lib/store";
 import type { AutosaveSnapshot, ShareRecord, VersionMetadata } from "@/lib/types";
 import { relativeTime } from "@/lib/relative-time";
 import WriterAnnotationPanel from "@/components/editor/WriterAnnotationPanel";
+import ViewSnapshotModal from "@/components/editor/ViewSnapshotModal";
 
 type Tab = "versions" | "autosaves" | "shares";
 
@@ -76,6 +77,12 @@ function shareUrl(token: string): string {
   return `${base}/share/${token}`;
 }
 
+// ─── restore target type ──────────────────────────────────────────────────────
+
+type RestoreTarget =
+  | { kind: "version"; versionId: string; label: string }
+  | { kind: "autosave"; date: string; slot: number; label: string };
+
 // ─── modal ────────────────────────────────────────────────────────────────────
 
 interface Props { onClose: () => void; }
@@ -117,6 +124,15 @@ export default function VersionsModal({ onClose }: Props) {
   const commentsVersion = commentsVersionId
     ? (versions.find((v) => v.versionId === commentsVersionId) ?? null)
     : null;
+
+  // View snapshot
+  const [viewTarget, setViewTarget]         = useState<{ label: string; fountain: string } | null>(null);
+  const [loadingViewId, setLoadingViewId]   = useState<string | null>(null);
+
+  // Restore confirm
+  const [restoreTarget, setRestoreTarget]   = useState<RestoreTarget | null>(null);
+  const [restoring, setRestoring]           = useState(false);
+  const [restoreError, setRestoreError]     = useState<string | null>(null);
 
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -228,7 +244,6 @@ export default function VersionsModal({ onClose }: Props) {
       if (!res.ok) throw new Error("server error");
       const record = (await res.json()) as ShareRecord;
       setShareResult({ url: shareUrl(record.token) });
-      // Refresh shares so the tab is up to date when they switch to it.
       fetch("/api/shares")
         .then((r) => r.json())
         .then((d) => setShares(d.shares ?? []))
@@ -258,105 +273,240 @@ export default function VersionsModal({ onClose }: Props) {
     }
   }
 
+  // ── View snapshot ──
+  async function handleViewVersion(versionId: string, label: string) {
+    if (!currentScriptId) return;
+    const id = `v:${versionId}`;
+    setLoadingViewId(id);
+    try {
+      const res = await fetch(`/api/scripts/${currentScriptId}/versions/${versionId}`);
+      if (!res.ok) return;
+      const data = (await res.json()) as { fountain: string };
+      setViewTarget({ label, fountain: data.fountain ?? "" });
+    } finally {
+      setLoadingViewId(null);
+    }
+  }
+
+  async function handleViewAutosave(date: string, slot: number, slotLabel: string) {
+    if (!currentScriptId) return;
+    const id = `a:${date}/${slot}`;
+    setLoadingViewId(id);
+    try {
+      const res = await fetch(`/api/scripts/${currentScriptId}/autosaves/${date}/${slot}`);
+      if (!res.ok) return;
+      const data = (await res.json()) as { fountain: string };
+      setViewTarget({ label: slotLabel, fountain: data.fountain ?? "" });
+    } finally {
+      setLoadingViewId(null);
+    }
+  }
+
+  // ── Restore ──
+  async function handleRestoreConfirm() {
+    if (!restoreTarget || !currentScriptId || restoring) return;
+    setRestoring(true);
+    setRestoreError(null);
+    try {
+      const body =
+        restoreTarget.kind === "version"
+          ? { source: "version", versionId: restoreTarget.versionId }
+          : { source: "autosave", date: restoreTarget.date, slot: restoreTarget.slot };
+
+      const res = await fetch(`/api/scripts/${currentScriptId}/restore`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      if (!res.ok) throw new Error("Restore failed");
+      const data = (await res.json()) as { fountain: string };
+
+      const { requestRestore } = useScriptForgeStore.getState();
+      requestRestore?.(data.fountain);
+
+      setRestoreTarget(null);
+      onClose();
+    } catch {
+      setRestoreError("Restore failed. Try again.");
+      setTimeout(() => setRestoreError(null), 4000);
+    } finally {
+      setRestoring(false);
+    }
+  }
+
   if (!mounted) return null;
 
   const scriptShares = shares.filter((s) => s.scriptId === currentScriptId);
 
   return createPortal(
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
-      onClick={handleBackdropClick}
-    >
+    <>
       <div
-        className="relative w-full mx-4 flex flex-col"
-        style={{
-          maxWidth: "720px", maxHeight: "70vh",
-          background: "#13131a", border: "1px solid #2a2a35",
-          borderRadius: "12px", boxShadow: "0 20px 80px rgba(0,0,0,0.7)",
-        }}
+        className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
+        onClick={handleBackdropClick}
       >
-        {/* Header */}
-        <div className="flex items-center justify-between px-6 pt-5 pb-4 shrink-0">
-          <h2 className="text-white text-[20px] font-bold font-sans leading-none">
-            Version History
-          </h2>
-          <button onClick={onClose}
-            className="text-[var(--color-fg-secondary)] hover:text-white transition-colors p-1 -mr-1"
-            aria-label="Close"
-          >
-            <X size={18} />
-          </button>
-        </div>
-
-        {/* Tabs */}
-        <div className="flex shrink-0 px-6" style={{ borderBottom: "1px solid #2a2a35" }}>
-          {TABS.map((tab) => (
-            <button key={tab.id} onClick={() => setActiveTab(tab.id)}
-              className={`text-[13px] font-sans pb-[11px] mr-5 transition-colors border-b-2 ${
-                activeTab === tab.id
-                  ? "text-white border-indigo-500"
-                  : "text-[#6b6b76] border-transparent hover:text-indigo-400"
-              }`}
+        <div
+          className="relative w-full mx-4 flex flex-col"
+          style={{
+            maxWidth: "720px", maxHeight: "70vh",
+            background: "#13131a", border: "1px solid #2a2a35",
+            borderRadius: "12px", boxShadow: "0 20px 80px rgba(0,0,0,0.7)",
+          }}
+        >
+          {/* Header */}
+          <div className="flex items-center justify-between px-6 pt-5 pb-4 shrink-0">
+            <h2 className="text-white text-[20px] font-bold font-sans leading-none">
+              Version History
+            </h2>
+            <button onClick={onClose}
+              className="text-[var(--color-fg-secondary)] hover:text-white transition-colors p-1 -mr-1"
+              aria-label="Close"
             >
-              {tab.label}
+              <X size={18} />
             </button>
-          ))}
+          </div>
+
+          {/* Tabs */}
+          <div className="flex shrink-0 px-6" style={{ borderBottom: "1px solid #2a2a35" }}>
+            {TABS.map((tab) => (
+              <button key={tab.id} onClick={() => setActiveTab(tab.id)}
+                className={`text-[13px] font-sans pb-[11px] mr-5 transition-colors border-b-2 ${
+                  activeTab === tab.id
+                    ? "text-white border-indigo-500"
+                    : "text-[#6b6b76] border-transparent hover:text-indigo-400"
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Content */}
+          <div className="overflow-y-auto flex-1 px-6 py-5">
+            {activeTab === "versions" && (
+              <VersionsTab
+                versions={versions}
+                loading={versionsLoading}
+                showSaveForm={showSaveForm}
+                labelInput={labelInput}
+                setLabelInput={setLabelInput}
+                saving={saving}
+                saveError={saveError}
+                flashVersionId={flashVersionId}
+                inputRef={inputRef}
+                shareDialogVersionId={shareDialogVersionId}
+                shareExpiry={shareExpiry}
+                setShareExpiry={setShareExpiry}
+                shareCreating={shareCreating}
+                shareResult={shareResult}
+                shareCopied={shareCopied}
+                loadingViewId={loadingViewId}
+                onOpenSaveForm={openSaveForm}
+                onSave={handleSaveVersion}
+                onCancelSave={() => setShowSaveForm(false)}
+                onOpenShareDialog={openShareDialog}
+                onCloseShareDialog={closeShareDialog}
+                onCreateShare={handleCreateShare}
+                onCopyShareLink={handleCopyShareLink}
+                onViewComments={setCommentsVersionId}
+                onViewVersion={handleViewVersion}
+                onRestoreVersion={(versionId, label) =>
+                  setRestoreTarget({ kind: "version", versionId, label })
+                }
+              />
+            )}
+
+            {activeTab === "autosaves" && (
+              <AutosavesTab
+                snapshots={autosaves}
+                loading={autosavesLoading}
+                loadingViewId={loadingViewId}
+                onViewAutosave={handleViewAutosave}
+                onRestoreAutosave={(date, slot, label) =>
+                  setRestoreTarget({ kind: "autosave", date, slot, label })
+                }
+              />
+            )}
+
+            {activeTab === "shares" && (
+              <SharesTab
+                shares={scriptShares}
+                loading={sharesLoading}
+                revokingToken={revokingToken}
+                onRevoke={handleRevoke}
+              />
+            )}
+          </div>
         </div>
 
-        {/* Content */}
-        <div className="overflow-y-auto flex-1 px-6 py-5">
-          {activeTab === "versions" && (
-            <VersionsTab
-              versions={versions}
-              loading={versionsLoading}
-              showSaveForm={showSaveForm}
-              labelInput={labelInput}
-              setLabelInput={setLabelInput}
-              saving={saving}
-              saveError={saveError}
-              flashVersionId={flashVersionId}
-              inputRef={inputRef}
-              shareDialogVersionId={shareDialogVersionId}
-              shareExpiry={shareExpiry}
-              setShareExpiry={setShareExpiry}
-              shareCreating={shareCreating}
-              shareResult={shareResult}
-              shareCopied={shareCopied}
-              onOpenSaveForm={openSaveForm}
-              onSave={handleSaveVersion}
-              onCancelSave={() => setShowSaveForm(false)}
-              onOpenShareDialog={openShareDialog}
-              onCloseShareDialog={closeShareDialog}
-              onCreateShare={handleCreateShare}
-              onCopyShareLink={handleCopyShareLink}
-              onViewComments={setCommentsVersionId}
-            />
-          )}
-
-          {activeTab === "autosaves" && (
-            <AutosavesTab snapshots={autosaves} loading={autosavesLoading} />
-          )}
-
-          {activeTab === "shares" && (
-            <SharesTab
-              shares={scriptShares}
-              loading={sharesLoading}
-              revokingToken={revokingToken}
-              onRevoke={handleRevoke}
-            />
-          )}
-        </div>
+        {commentsVersionId && currentScriptId && commentsVersion && (
+          <WriterAnnotationPanel
+            scriptId={currentScriptId}
+            versionId={commentsVersionId}
+            versionLabel={commentsVersion.label}
+            onClose={() => setCommentsVersionId(null)}
+          />
+        )}
       </div>
 
-      {commentsVersionId && currentScriptId && commentsVersion && (
-        <WriterAnnotationPanel
-          scriptId={currentScriptId}
-          versionId={commentsVersionId}
-          versionLabel={commentsVersion.label}
-          onClose={() => setCommentsVersionId(null)}
+      {/* View snapshot — full-screen overlay above the modal */}
+      {viewTarget && (
+        <ViewSnapshotModal
+          label={viewTarget.label}
+          fountain={viewTarget.fountain}
+          onClose={() => setViewTarget(null)}
         />
       )}
-    </div>,
+
+      {/* Restore confirm dialog — layered above the modal */}
+      {restoreTarget && createPortal(
+        <div
+          className="fixed inset-0 z-[70] flex items-center justify-center"
+          style={{ background: "rgba(0,0,0,0.7)" }}
+        >
+          <div
+            className="mx-4 p-6 rounded-xl"
+            style={{
+              maxWidth: "400px", width: "100%",
+              background: "#13131a", border: "1px solid #2a2a35",
+              boxShadow: "0 20px 60px rgba(0,0,0,0.8)",
+            }}
+          >
+            <h3 className="text-white font-semibold font-sans text-[16px] mb-2">
+              {restoreTarget.kind === "version" ? "Restore version" : "Restore auto-save"}
+            </h3>
+            <p className="text-[13px] font-sans mb-5" style={{ color: "#9099a8" }}>
+              {restoreTarget.kind === "version"
+                ? `Restore "${restoreTarget.label}"? This will replace your current script content.`
+                : `Restore auto-save ${restoreTarget.label}? This will replace your current script content.`}
+            </p>
+            {restoreError && (
+              <p className="text-[12px] font-sans mb-3" style={{ color: "#f87171" }}>
+                {restoreError}
+              </p>
+            )}
+            <div className="flex gap-2 justify-end">
+              <button
+                onClick={() => { setRestoreTarget(null); setRestoreError(null); }}
+                disabled={restoring}
+                className="px-4 py-2 text-[13px] font-sans rounded transition-colors disabled:opacity-50"
+                style={{ background: "#1e1e28", color: "#9099a8" }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleRestoreConfirm}
+                disabled={restoring}
+                className="px-4 py-2 text-[13px] font-semibold font-sans rounded text-white transition-colors disabled:opacity-50"
+                style={{ background: "#ef4444" }}
+              >
+                {restoring ? "Restoring…" : "Restore"}
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+    </>,
     document.body
   );
 }
@@ -366,10 +516,10 @@ export default function VersionsModal({ onClose }: Props) {
 function VersionsTab({
   versions, loading, showSaveForm, labelInput, setLabelInput, saving, saveError,
   flashVersionId, inputRef, shareDialogVersionId, shareExpiry, setShareExpiry,
-  shareCreating, shareResult, shareCopied,
+  shareCreating, shareResult, shareCopied, loadingViewId,
   onOpenSaveForm, onSave, onCancelSave,
   onOpenShareDialog, onCloseShareDialog, onCreateShare, onCopyShareLink,
-  onViewComments,
+  onViewComments, onViewVersion, onRestoreVersion,
 }: {
   versions: VersionMetadata[];
   loading: boolean;
@@ -386,6 +536,7 @@ function VersionsTab({
   shareCreating: boolean;
   shareResult: { url: string } | null;
   shareCopied: boolean;
+  loadingViewId: string | null;
   onOpenSaveForm: () => void;
   onSave: () => void;
   onCancelSave: () => void;
@@ -394,6 +545,8 @@ function VersionsTab({
   onCreateShare: () => void;
   onCopyShareLink: (url: string) => void;
   onViewComments: (versionId: string) => void;
+  onViewVersion: (versionId: string, label: string) => void;
+  onRestoreVersion: (versionId: string, label: string) => void;
 }) {
   return (
     <>
@@ -443,8 +596,11 @@ function VersionsTab({
               version={v}
               flash={v.versionId === flashVersionId}
               shareActive={shareDialogVersionId === v.versionId}
+              viewLoading={loadingViewId === `v:${v.versionId}`}
               onShare={() => onOpenShareDialog(v.versionId)}
               onViewComments={() => onViewComments(v.versionId)}
+              onView={() => onViewVersion(v.versionId, v.label)}
+              onRestore={() => onRestoreVersion(v.versionId, v.label)}
             />
             {shareDialogVersionId === v.versionId && (
               <ShareInlineForm
@@ -466,13 +622,16 @@ function VersionsTab({
 }
 
 function VersionRow({
-  version, flash, shareActive, onShare, onViewComments,
+  version, flash, shareActive, viewLoading, onShare, onViewComments, onView, onRestore,
 }: {
   version: VersionMetadata;
   flash: boolean;
   shareActive: boolean;
+  viewLoading: boolean;
   onShare: () => void;
   onViewComments: () => void;
+  onView: () => void;
+  onRestore: () => void;
 }) {
   return (
     <div
@@ -507,9 +666,21 @@ function VersionRow({
             shareActive ? "text-indigo-400" : "text-[#6b6b76] hover:text-indigo-400"
           }`}
         >Share</button>
-        <button onClick={() => console.log("Restore version", version.versionId)}
-          className="px-2.5 py-1.5 text-[12px] font-sans text-[#6b6b76] rounded hover:text-indigo-400 transition-colors"
-        >Restore</button>
+        <button
+          onClick={onView}
+          disabled={viewLoading}
+          className="flex items-center gap-1 px-2.5 py-1.5 text-[12px] font-sans text-[#6b6b76] rounded hover:text-indigo-400 transition-colors disabled:opacity-50"
+        >
+          <Eye size={11} />
+          {viewLoading ? "…" : "View"}
+        </button>
+        <button
+          onClick={onRestore}
+          className="flex items-center gap-1 px-2.5 py-1.5 text-[12px] font-sans text-[#6b6b76] rounded hover:text-indigo-400 transition-colors"
+        >
+          <RotateCcw size={11} />
+          Restore
+        </button>
       </div>
     </div>
   );
@@ -589,7 +760,15 @@ function ShareInlineForm({
 
 // ─── Auto-saves tab ───────────────────────────────────────────────────────────
 
-function AutosavesTab({ snapshots, loading }: { snapshots: AutosaveSnapshot[]; loading: boolean }) {
+function AutosavesTab({
+  snapshots, loading, loadingViewId, onViewAutosave, onRestoreAutosave,
+}: {
+  snapshots: AutosaveSnapshot[];
+  loading: boolean;
+  loadingViewId: string | null;
+  onViewAutosave: (date: string, slot: number, label: string) => void;
+  onRestoreAutosave: (date: string, slot: number, label: string) => void;
+}) {
   if (loading) return <div className="text-[13px] text-[var(--color-fg-secondary)] font-sans">Loading…</div>;
 
   if (snapshots.length === 0) {
@@ -609,29 +788,42 @@ function AutosavesTab({ snapshots, loading }: { snapshots: AutosaveSnapshot[]; l
           >
             {group.label}
           </p>
-          {group.items.map((s) => (
-            <div key={`${s.date}-${s.slot}`}
-              className="flex items-center gap-4 py-3"
-              style={{ borderBottom: "1px solid #1e1e28" }}
-            >
-              <div className="flex-1 min-w-0">
-                <p className="text-white text-[13px] font-medium font-sans leading-tight">
-                  Slot {s.slot} — {formatSlotTime(s.createdAt)}
-                </p>
-                <p className="text-[#6b6b76] text-[11px] font-sans mt-0.5">
-                  {relativeTime(s.createdAt)}
-                </p>
+          {group.items.map((s) => {
+            const slotLabel = `Slot ${s.slot} — ${formatSlotTime(s.createdAt)}`;
+            const viewId = `a:${s.date}/${s.slot}`;
+            return (
+              <div key={`${s.date}-${s.slot}`}
+                className="flex items-center gap-4 py-3"
+                style={{ borderBottom: "1px solid #1e1e28" }}
+              >
+                <div className="flex-1 min-w-0">
+                  <p className="text-white text-[13px] font-medium font-sans leading-tight">
+                    {slotLabel}
+                  </p>
+                  <p className="text-[#6b6b76] text-[11px] font-sans mt-0.5">
+                    {relativeTime(s.createdAt)}
+                  </p>
+                </div>
+                <div className="flex items-center gap-0.5 shrink-0">
+                  <button
+                    onClick={() => onViewAutosave(s.date, s.slot, slotLabel)}
+                    disabled={loadingViewId === viewId}
+                    className="flex items-center gap-1 px-2.5 py-1.5 text-[12px] font-sans text-[#6b6b76] rounded hover:text-indigo-400 transition-colors disabled:opacity-50"
+                  >
+                    <Eye size={11} />
+                    {loadingViewId === viewId ? "…" : "View"}
+                  </button>
+                  <button
+                    onClick={() => onRestoreAutosave(s.date, s.slot, slotLabel)}
+                    className="flex items-center gap-1 px-2.5 py-1.5 text-[12px] font-sans text-[#6b6b76] rounded hover:text-indigo-400 transition-colors"
+                  >
+                    <RotateCcw size={11} />
+                    Restore
+                  </button>
+                </div>
               </div>
-              <div className="flex items-center gap-0.5 shrink-0">
-                <button onClick={() => console.log("View autosave", s.date, s.slot)}
-                  className="px-2.5 py-1.5 text-[12px] font-sans text-[#6b6b76] rounded hover:text-indigo-400 transition-colors"
-                >View</button>
-                <button onClick={() => console.log("Restore autosave", s.date, s.slot)}
-                  className="px-2.5 py-1.5 text-[12px] font-sans text-[#6b6b76] rounded hover:text-indigo-400 transition-colors"
-                >Restore</button>
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       ))}
     </>
@@ -715,3 +907,4 @@ function SharesTab({
     </>
   );
 }
+

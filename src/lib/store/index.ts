@@ -58,6 +58,12 @@ interface ScriptForgeState {
   // Immediate-save callback registered by ScreenplayEditor
   requestSave: (() => Promise<void>) | null;
   setRequestSave: (fn: (() => Promise<void>) | null) => void;
+  // Restore callback registered by ScreenplayEditor — reloads editor content from a fountain string
+  requestRestore: ((fountain: string) => void) | null;
+  setRequestRestore: (fn: ((fountain: string) => void) | null) => void;
+  // Editor paper theme
+  editorTheme: "light" | "dark";
+  setEditorTheme: (theme: "light" | "dark") => void;
 }
 
 export const useScriptForgeStore = create<ScriptForgeState>()((set) => ({
@@ -102,4 +108,11 @@ export const useScriptForgeStore = create<ScriptForgeState>()((set) => ({
   setProfiles: (profiles) => set({ profiles }),
   requestSave: null,
   setRequestSave: (fn) => set({ requestSave: fn }),
+  requestRestore: null,
+  setRequestRestore: (fn) => set({ requestRestore: fn }),
+  editorTheme: "light",
+  setEditorTheme: (theme) => {
+    set({ editorTheme: theme });
+    if (typeof window !== "undefined") localStorage.setItem("editorTheme", theme);
+  },
 }));
