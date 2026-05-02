@@ -7,6 +7,7 @@ import type { Profile, ScriptMetadata } from "@/lib/types";
 import { relativeTime } from "@/lib/relative-time";
 import { useScriptForgeStore } from "@/lib/store";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
+import TypeToConfirmDialog from "@/components/ui/TypeToConfirmDialog";
 
 export default function ScriptLauncher() {
   const router = useRouter();
@@ -30,6 +31,9 @@ export default function ScriptLauncher() {
   const [editingProfileId, setEditingProfileId] = useState<string | null>(null);
   const [editName, setEditName] = useState("");
   const [savingEdit, setSavingEdit] = useState(false);
+
+  // Profile deletion
+  const [pendingDeleteProfile, setPendingDeleteProfile] = useState<Profile | null>(null);
 
   // On mount: fetch profiles and hydrate activeProfile from localStorage
   useEffect(() => {
@@ -250,6 +254,7 @@ export default function ScriptLauncher() {
   // ─── STEP A: Profile selector ─────────────────────────────────────────────
 
   return (
+    <>
     <div className="w-full max-w-[480px] bg-[var(--color-surface)] border border-[var(--color-border-strong)] rounded-xl overflow-hidden shadow-[0_8px_40px_rgba(0,0,0,0.5)]">
       <div className="px-5 pt-5 pb-3 text-[10px] text-[var(--color-fg-secondary)] uppercase tracking-[0.12em] font-sans">
         Who&apos;s writing?
@@ -332,6 +337,17 @@ export default function ScriptLauncher() {
                 >
                   <Pencil size={13} />
                 </button>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setPendingDeleteProfile(profile);
+                  }}
+                  className="shrink-0 p-1.5 rounded opacity-0 group-hover:opacity-100 transition-opacity hover:text-red-400"
+                  style={{ color: "#6b6b76" }}
+                  title="Delete profile"
+                >
+                  <Trash2 size={13} />
+                </button>
                 <ChevronRight
                   size={14}
                   className="text-[var(--color-fg-secondary)] shrink-0 group-hover:text-indigo-400 transition-colors"
@@ -395,5 +411,33 @@ export default function ScriptLauncher() {
         </button>
       )}
     </div>
+
+    {pendingDeleteProfile && (
+      <TypeToConfirmDialog
+        title="Delete profile?"
+        body={`This will permanently delete the profile "${pendingDeleteProfile.name}". This cannot be undone.`}
+        confirmPrompt="Type the profile name to confirm:"
+        confirmMatch={pendingDeleteProfile.name}
+        confirmLabel="Delete profile"
+        onConfirm={async () => {
+          const target = pendingDeleteProfile!;
+          const res = await fetch(`/api/profiles/${target.profileId}`, {
+            method: "DELETE",
+          });
+          if (res.status === 409) {
+            const data = (await res.json()) as { error?: string };
+            throw new Error(data.error ?? "Cannot delete this profile.");
+          }
+          if (!res.ok) throw new Error("Failed to delete. Try again.");
+          const newList = profiles.filter((p) => p.profileId !== target.profileId);
+          setProfiles(newList);
+          if (localStorage.getItem("activeProfileId") === target.profileId) {
+            setActiveProfile(null);
+          }
+        }}
+        onCancel={() => setPendingDeleteProfile(null)}
+      />
+    )}
+    </>
   );
 }
