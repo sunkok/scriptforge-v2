@@ -12,7 +12,7 @@ const TAB_MAP: Record<ElementType, ElementType> = {
   action:        "character",
   character:     "parenthetical",
   parenthetical: "dialogue",
-  dialogue:      "character",
+  dialogue:      "action",
   transition:    "scene_heading",
 };
 

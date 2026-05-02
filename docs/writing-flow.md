@@ -48,7 +48,7 @@ Note: empty Action/Character cases CONVERT the current line (no new line created
 | Action | Character |
 | Character | Parenthetical |
 | Parenthetical | Dialogue |
-| Dialogue | Character (cycle back for next speaker) |
+| Dialogue | Action |
 | Transition | Scene Heading |
 
 Example:
@@ -91,6 +91,8 @@ Same as Shift+Tab in spirit — relabels current line to a specific type.
 **Why Tab from Action relabels to Character:** If you typed action and realize "actually this should be a character cue," Tab relabels it without retyping. Tab cycles forward through the most natural progression.
 
 **Why Tab from Character relabels to Parenthetical:** Enter from Character goes to Dialogue (the common path). Tab offers "wait, I want a parenthetical first" — relabels the character line to Parenthetical. Type the note, then Enter for Dialogue.
+
+**Why Tab from Dialogue goes to Action:** After dialogue, the most common next element is Action (describing what happens next). This breaks the dialogue-cluster loop (Action → Character → Parenthetical → Dialogue → Action → …) so Tab never traps you. For back-and-forth dialogue, use Cmd+3 or type the next character name directly.
 
 **Why Shift+Tab relabels rather than navigates:** Going to a previous existing line is what arrow keys do. Shift+Tab is for fixing the current line's type without retyping its content.
 
