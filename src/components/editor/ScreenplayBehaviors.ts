@@ -1,16 +1,36 @@
 import { Extension } from "@tiptap/core";
 import { Plugin, PluginKey, TextSelection } from "@tiptap/pm/state";
-import { ELEMENT_CYCLE, isElementType, type ElementType } from "@/lib/editor/types";
+import { isElementType, type ElementType } from "@/lib/editor/types";
 
 const behaviorPluginKey = new PluginKey("screenplayBehaviors");
 
+// See docs/writing-flow.md for the reasoning behind these tables.
+
+const TAB_MAP: Record<ElementType, ElementType> = {
+  scene_heading: "action",
+  action:        "character",
+  character:     "parenthetical",
+  parenthetical: "dialogue",
+  dialogue:      "character",
+  transition:    "scene_heading",
+};
+
+const SHIFT_TAB_MAP: Record<ElementType, ElementType> = {
+  scene_heading: "transition",
+  action:        "scene_heading",
+  character:     "action",
+  parenthetical: "character",
+  dialogue:      "character", // may be overridden to "parenthetical" if prev block qualifies
+  transition:    "dialogue",
+};
+
 const ENTER_MAP: Record<ElementType, ElementType> = {
   scene_heading: "action",
-  action: "action",
-  character: "dialogue",
-  dialogue: "action",
+  action:        "action",
+  character:     "dialogue",
+  dialogue:      "action",
   parenthetical: "dialogue",
-  transition: "scene_heading",
+  transition:    "scene_heading",
 };
 
 const UPPERCASE_TYPES = new Set<ElementType>(["scene_heading", "character", "transition"]);
@@ -24,23 +44,57 @@ export const ScreenplayBehaviors = Extension.create({
       Tab: ({ editor }) => {
         const currentType = editor.state.selection.$anchor.parent.type.name;
         if (!isElementType(currentType)) return false;
-        const idx = ELEMENT_CYCLE.indexOf(currentType);
-        return editor.commands.setNode(ELEMENT_CYCLE[(idx + 1) % ELEMENT_CYCLE.length]);
+        return editor.commands.setNode(TAB_MAP[currentType]);
       },
 
       "Shift-Tab": ({ editor }) => {
-        const currentType = editor.state.selection.$anchor.parent.type.name;
+        const { $anchor } = editor.state.selection;
+        const currentType = $anchor.parent.type.name;
         if (!isElementType(currentType)) return false;
-        const idx = ELEMENT_CYCLE.indexOf(currentType);
-        return editor.commands.setNode(
-          ELEMENT_CYCLE[(idx - 1 + ELEMENT_CYCLE.length) % ELEMENT_CYCLE.length]
-        );
+
+        let targetType = SHIFT_TAB_MAP[currentType];
+
+        // From Dialogue: go to Parenthetical only if the immediately preceding
+        // sibling block within the same page is a non-empty Parenthetical.
+        if (currentType === "dialogue") {
+          const parentOffset = $anchor.start(-1); // start of the page node
+          const nodeStart = $anchor.before();      // start of the dialogue node
+          const relPos = nodeStart - parentOffset;
+
+          const pageNode = $anchor.node(-1);
+          let prevNode: typeof pageNode | null = null;
+          pageNode.forEach((child, offset) => {
+            if (offset + child.nodeSize === relPos) prevNode = child;
+          });
+
+          if (
+            prevNode &&
+            (prevNode as typeof pageNode).type.name === "parenthetical" &&
+            (prevNode as typeof pageNode).textContent.trim() !== ""
+          ) {
+            targetType = "parenthetical";
+          }
+        }
+
+        return editor.commands.setNode(targetType);
       },
 
       Enter: ({ editor }) => {
         const { $anchor } = editor.state.selection;
         const currentType = $anchor.parent.type.name;
         if (!isElementType(currentType)) return false;
+
+        const isEmpty = $anchor.parent.textContent === "";
+
+        // Empty Action → Character (start dialogue exchange)
+        if (currentType === "action" && isEmpty) {
+          return editor.commands.setNode("character");
+        }
+        // Empty Character → Action (cancel speaker, return to description)
+        if (currentType === "character" && isEmpty) {
+          return editor.commands.setNode("action");
+        }
+
         const nextType = ENTER_MAP[currentType];
         // Chain tracks stale positions after splitBlock; run sequentially instead.
         editor.commands.splitBlock();
