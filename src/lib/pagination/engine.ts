@@ -105,7 +105,11 @@ export class PaginationEngine {
 
       // DOM measurements (accurate for this page; stale for pages that
       // received blocks from previous iterations — handled in the next RAF).
-      const children = Array.from(contentEl.children) as HTMLElement[];
+      // NodeViewContent renders a wrapper div (contentDOMElement) inside contentEl;
+      // the actual screenplay blocks are its children, one level down.
+      const pmContent = contentEl.firstElementChild;
+      if (!pmContent) continue;
+      const children = Array.from(pmContent.children) as HTMLElement[];
       const contentTop = contentEl.getBoundingClientRect().top;
       const budget = contentTop + this.contentHeightPx;
 
@@ -182,7 +186,10 @@ export class PaginationEngine {
       const { contentEl: p2El } = pages[pi + 1];
 
       // p2's DOM is accurate at reconciliation time (idle, DOM settled).
-      const p2Children = Array.from(p2El.children) as HTMLElement[];
+      // Descend past Tiptap's contentDOMElement wrapper to the actual blocks.
+      const p2PmContent = p2El.firstElementChild;
+      if (!p2PmContent) continue;
+      const p2Children = Array.from(p2PmContent.children) as HTMLElement[];
       // p1VirtualHeight tracks P1's height as we speculatively add blocks.
       let p1VirtualHeight = p1El.getBoundingClientRect().height;
       let p2Consumed = 0; // how many of p2's blocks have been virtually moved
