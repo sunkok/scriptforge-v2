@@ -240,17 +240,183 @@ function CommentComposer({
   );
 }
 
+// ─── role pill helper ─────────────────────────────────────────────────────────
+
+function RolePill({ role }: { role: string }) {
+  const isWriter = role === "writer";
+  return (
+    <span
+      className="shrink-0 text-[10px] font-sans px-1.5 py-0.5 rounded"
+      style={{
+        background: isWriter ? "#14532d" : "#1e1b2e",
+        color: isWriter ? "#86efac" : "#a5b4fc",
+      }}
+    >
+      {isWriter ? "Writer" : "Reviewer"}
+    </span>
+  );
+}
+
+// ─── reply item inside popover ────────────────────────────────────────────────
+
+function ReplyItem({
+  reply,
+  token,
+  viewerName,
+  onRefresh,
+}: {
+  reply: Annotation;
+  token: string;
+  viewerName: string;
+  onRefresh: () => Promise<void>;
+}) {
+  const [editMode, setEditMode] = useState(false);
+  const [editBody, setEditBody] = useState(reply.body);
+  const [deleteConfirm, setDeleteConfirm] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const isOwn = reply.authorName === viewerName;
+
+  useEffect(() => { setEditBody(reply.body); }, [reply.body]);
+
+  const patch = async (updates: Partial<Annotation>): Promise<boolean> => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/shares/${token}/annotations/${reply.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(updates),
+      });
+      if (!res.ok) {
+        const data = (await res.json()) as { error?: string };
+        setError(data.error ?? "Failed");
+        setTimeout(() => setError(null), 3000);
+        return false;
+      }
+      await onRefresh();
+      return true;
+    } catch {
+      setError("Network error");
+      setTimeout(() => setError(null), 3000);
+      return false;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const confirmDelete = async () => {
+    setLoading(true);
+    try {
+      await fetch(`/api/shares/${token}/annotations/${reply.id}`, { method: "DELETE" });
+      await onRefresh();
+    } catch {
+      setError("Network error");
+      setTimeout(() => setError(null), 3000);
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div style={{ borderLeft: "2px solid #2a2a3a", paddingLeft: 10, marginTop: 10 }}>
+      <div className="flex items-center gap-1.5 flex-wrap mb-1">
+        <span className="text-[12px] font-bold font-sans text-white">{reply.authorName}</span>
+        <RolePill role={reply.authorRole} />
+      </div>
+      {editMode ? (
+        <textarea
+          value={editBody}
+          onChange={(e) => setEditBody(e.target.value)}
+          rows={2}
+          autoFocus
+          className="w-full px-2 py-1.5 rounded text-[12px] font-sans text-white focus:outline-none resize-none"
+          style={{ background: "#0a0a10", border: "1px solid #2a2a35", minHeight: 52 }}
+        />
+      ) : (
+        <p className="text-[12px] font-sans leading-snug" style={{ color: "#c8cdd8" }}>
+          {reply.body}
+        </p>
+      )}
+      <p className="text-[10px] font-sans mt-0.5" style={{ color: "#4a5060" }}>
+        {relativeTime(reply.createdAt)}
+      </p>
+      {error && (
+        <p className="text-[11px] font-sans mt-1" style={{ color: "#f87171" }}>{error}</p>
+      )}
+      {isOwn && (
+        deleteConfirm ? (
+          <div className="flex gap-1.5 mt-1.5">
+            <button
+              onClick={() => void confirmDelete()}
+              disabled={loading}
+              className="flex-1 py-1 rounded text-[11px] font-sans font-semibold text-white disabled:opacity-40"
+              style={{ background: "#ef4444" }}
+            >
+              {loading ? "Deleting…" : "Delete"}
+            </button>
+            <button
+              onClick={() => setDeleteConfirm(false)}
+              className="flex-1 py-1 rounded text-[11px] font-sans"
+              style={{ background: "#1f2535", color: "#9099a8" }}
+            >
+              Cancel
+            </button>
+          </div>
+        ) : editMode ? (
+          <div className="flex gap-1.5 mt-1.5">
+            <button
+              onClick={async () => { const ok = await patch({ body: editBody.trim() }); if (ok) setEditMode(false); }}
+              disabled={!editBody.trim() || loading}
+              className="flex-1 py-1 rounded text-[11px] font-sans font-semibold text-white disabled:opacity-40"
+              style={{ background: "#6366f1" }}
+            >
+              {loading ? "Saving…" : "Save"}
+            </button>
+            <button
+              onClick={() => { setEditMode(false); setEditBody(reply.body); }}
+              className="flex-1 py-1 rounded text-[11px] font-sans"
+              style={{ background: "#1f2535", color: "#9099a8" }}
+            >
+              Cancel
+            </button>
+          </div>
+        ) : (
+          <div className="flex gap-1.5 mt-1.5">
+            <button
+              onClick={() => setEditMode(true)}
+              className="text-[11px] font-sans px-2 py-0.5 rounded"
+              style={{ background: "#1f2535", color: "#9099a8" }}
+            >
+              Edit
+            </button>
+            <button
+              onClick={() => setDeleteConfirm(true)}
+              className="text-[11px] font-sans px-2 py-0.5 rounded"
+              style={{ background: "#1f2535", color: "#f87171" }}
+            >
+              Delete
+            </button>
+          </div>
+        )
+      )}
+    </div>
+  );
+}
+
 // ─── annotation view popover ──────────────────────────────────────────────────
 
 function AnnotationViewerPopover({
   token,
   annotation,
+  replies,
   pos,
+  reviewerName,
   onClose,
   onRefresh,
 }: {
   token: string;
   annotation: Annotation;
+  replies: Annotation[];
   pos: { x: number; y: number };
   reviewerName: string;
   onClose: () => void;
@@ -277,7 +443,6 @@ function AnnotationViewerPopover({
     return () => document.removeEventListener("keydown", onKey);
   }, [onClose]);
 
-  // Sync editBody when annotation updates after refresh
   useEffect(() => { setEditBody(annotation.body); }, [annotation.body]);
 
   const patch = async (updates: Partial<Annotation>): Promise<boolean> => {
@@ -336,8 +501,8 @@ function AnnotationViewerPopover({
 
   const vw = typeof window !== "undefined" ? window.innerWidth : 1200;
   const vh = typeof window !== "undefined" ? window.innerHeight : 800;
-  const left = Math.min(pos.x + 8, vw - 320);
-  const top = Math.min(pos.y, vh - 290);
+  const left = Math.min(pos.x + 8, vw - 420);
+  const top = Math.min(pos.y, vh - 320);
   const snippet =
     annotation.anchorQuote.length > 80
       ? annotation.anchorQuote.slice(0, 80) + "…"
@@ -351,7 +516,8 @@ function AnnotationViewerPopover({
         left,
         top,
         zIndex: 60,
-        width: 300,
+        minWidth: 280,
+        maxWidth: 400,
         background: "#13131a",
         border: "1px solid #2a2a35",
       }}
@@ -363,17 +529,7 @@ function AnnotationViewerPopover({
           <span className="text-[13px] font-bold font-sans text-white truncate">
             {annotation.authorName}
           </span>
-          <span
-            className="shrink-0 text-[10px] font-sans px-1.5 py-0.5 rounded"
-            style={{
-              background:
-                annotation.authorRole === "writer" ? "#1e293b" : "#1e1b2e",
-              color:
-                annotation.authorRole === "writer" ? "#94a3b8" : "#a5b4fc",
-            }}
-          >
-            {annotation.authorRole === "writer" ? "Writer" : "Reviewer"}
-          </span>
+          <RolePill role={annotation.authorRole} />
           {annotation.resolvedAt && (
             <span
               className="shrink-0 text-[10px] font-sans px-1.5 py-0.5 rounded"
@@ -425,7 +581,7 @@ function AnnotationViewerPopover({
         />
       ) : (
         <p
-          className="text-[13px] font-sans leading-snug mb-2"
+          className="text-[13px] font-sans leading-snug mb-1"
           style={{ color: "#c8cdd8" }}
         >
           {annotation.body}
@@ -511,6 +667,21 @@ function AnnotationViewerPopover({
           </button>
         </div>
       )}
+
+      {/* Replies */}
+      {replies.length > 0 && (
+        <div style={{ borderTop: "1px solid #1f1f2a", marginTop: 12, paddingTop: 4 }}>
+          {replies.map((reply) => (
+            <ReplyItem
+              key={reply.id}
+              reply={reply}
+              token={token}
+              viewerName={reviewerName}
+              onRefresh={onRefresh}
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -538,6 +709,11 @@ function ReviewerView({
     viewerAnnotationId
       ? (annotations.find((a) => a.id === viewerAnnotationId) ?? null)
       : null;
+  const viewerReplies = viewerAnnotationId
+    ? annotations
+        .filter((a) => a.parentId === viewerAnnotationId)
+        .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
+    : [];
 
   const doc = fountainToTiptap(fountain);
 
@@ -729,6 +905,7 @@ function ReviewerView({
           key={viewerAnnotation.id}
           token={token}
           annotation={viewerAnnotation}
+          replies={viewerReplies}
           pos={viewerPos}
           reviewerName={reviewerName}
           onClose={() => { setViewerAnnotationId(null); setViewerPos(null); }}
