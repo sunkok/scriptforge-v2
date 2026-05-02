@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef } from "react";
+import { useRef, useState, useEffect } from "react";
 import { Upload, Download, Wand2, Bold, Italic, Underline, Strikethrough } from "lucide-react";
 import type { Editor } from "@tiptap/core";
 import { useEditorState } from "@tiptap/react";
@@ -9,6 +9,8 @@ import { ELEMENT_DISPLAY_NAMES, type ElementType } from "@/lib/editor/types";
 import { fountainToTiptap } from "@/lib/fountain/parser";
 import { tiptapToFountain } from "@/lib/fountain/serializer";
 import { parseTitleBlock } from "@/lib/fountain/title-block";
+import { scanDocument } from "@/lib/editor/scan-document";
+import AutoFixPanel from "./AutoFixPanel";
 
 // Screenplay-natural display order (differs from Tab-cycle order).
 const TOOLBAR_ELEMENTS: ElementType[] = [
@@ -29,6 +31,14 @@ export default function EditorToolbar({ editor }: Props) {
   const setTitleBlock = useScriptForgeStore((s) => s.setTitleBlock);
   const setScriptMeta = useScriptForgeStore((s) => s.setScriptMeta);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [showAutoFixPanel, setShowAutoFixPanel] = useState(false);
+  const [noIssuesVisible, setNoIssuesVisible] = useState(false);
+
+  useEffect(() => {
+    if (!noIssuesVisible) return;
+    const t = setTimeout(() => setNoIssuesVisible(false), 3000);
+    return () => clearTimeout(t);
+  }, [noIssuesVisible]);
 
   // Reactive active-mark state — updates whenever selection or doc changes.
   const { isBold, isItalic, isUnderline, isStrike } = useEditorState({
@@ -81,6 +91,16 @@ export default function EditorToolbar({ editor }: Props) {
       editor.commands.focus();
     };
     reader.readAsText(file);
+  }
+
+  function handleAutoFix() {
+    if (!editor) return;
+    const issues = scanDocument(editor.state.doc);
+    if (issues.length === 0) {
+      setNoIssuesVisible(true);
+    } else {
+      setShowAutoFixPanel(true);
+    }
   }
 
   function handleDownload() {
@@ -183,10 +203,35 @@ export default function EditorToolbar({ editor }: Props) {
           <ToolButton
             icon={<Wand2 size={13} />}
             label="Auto-fix"
-            onClick={() => console.log("Auto-fix clicked")}
+            onClick={handleAutoFix}
+            disabled={!editor}
           />
         </div>
       </div>
+
+      {/* No-issues toast */}
+      {noIssuesVisible && (
+        <div
+          className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 px-4 py-2.5 rounded-lg font-sans text-[13px] cursor-pointer select-none"
+          style={{
+            background: "#1e1e28",
+            border: "1px solid #2a2a35",
+            color: "#9099a8",
+            boxShadow: "0 4px 20px rgba(0,0,0,0.4)",
+          }}
+          onClick={() => setNoIssuesVisible(false)}
+        >
+          No formatting issues found
+        </div>
+      )}
+
+      {/* Auto-fix panel */}
+      {showAutoFixPanel && editor && (
+        <AutoFixPanel
+          editor={editor}
+          onClose={() => setShowAutoFixPanel(false)}
+        />
+      )}
     </>
   );
 }
