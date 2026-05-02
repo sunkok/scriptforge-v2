@@ -46,7 +46,9 @@ export const ScreenplayBehaviors = Extension.create({
         const currentType = $anchor.parent.type.name;
         if (!isElementType(currentType)) return false;
         const nextType = ENTER_MAP[currentType];
-        return editor.chain().splitBlock().setNode(nextType).run();
+        // Chain tracks stale positions after splitBlock; run sequentially instead.
+        editor.commands.splitBlock();
+        return editor.commands.setNode(nextType);
       },
     };
   },

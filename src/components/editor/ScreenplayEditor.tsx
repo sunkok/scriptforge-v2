@@ -59,7 +59,7 @@ export default function ScreenplayEditor() {
   });
 
   return (
-    <div className="min-h-screen bg-[var(--color-canvas)] overflow-y-auto py-10">
+    <div className="h-screen bg-[var(--color-canvas)] overflow-y-auto py-10">
       <EditorContent editor={editor} />
     </div>
   );
