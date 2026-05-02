@@ -55,7 +55,7 @@ export default function OpenScriptModal({ onClose }: Props) {
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
           onClick={handleBackdropClick}
         >
-          <div className="relative w-full max-w-[480px] mx-4 bg-[var(--color-surface)] border border-[var(--color-border-strong)] rounded-xl shadow-[0_16px_64px_rgba(0,0,0,0.6)] flex flex-col max-h-[70vh]">
+          <div className="modal-glass relative w-full max-w-[480px] mx-4 flex flex-col max-h-[70vh]">
             {/* Header */}
             <div className="flex items-center justify-between px-5 pt-5 pb-4 shrink-0">
               <h2 className="text-white text-[20px] font-bold font-sans leading-none">

@@ -213,3 +213,28 @@ body {
     border-bottom: none !important;
   }
 }
+
+/* ─── Glassmorphism modal surfaces ─────────────────────────────────────────── */
+.modal-glass {
+  background: rgba(16, 16, 22, 0.78);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 20px;
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.5),
+    0 0 80px rgba(99, 102, 241, 0.18),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+/* Right-edge slide-over panel (e.g. Auto-fix panel) */
+.panel-glass-right {
+  background: rgba(16, 16, 22, 0.88);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-left: 1px solid rgba(255, 255, 255, 0.07);
+  box-shadow:
+    -8px 0 40px rgba(0, 0, 0, 0.5),
+    -60px 0 80px rgba(99, 102, 241, 0.12),
+    inset 1px 0 0 rgba(255, 255, 255, 0.03);
+}

@@ -59,8 +59,7 @@ export default function ConfirmDialog({
       className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm"
       onClick={handleBackdrop}
     >
-      <div className="w-full max-w-[400px] mx-4 rounded-xl shadow-[0_16px_64px_rgba(0,0,0,0.6)] p-6"
-        style={{ background: "#13131a", border: "1px solid #2a2a35" }}>
+      <div className="modal-glass w-full max-w-[400px] mx-4 p-6">
         <h2 className="text-white text-[18px] font-bold font-sans mb-3 leading-snug">
           {title}
         </h2>

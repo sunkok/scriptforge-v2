@@ -345,12 +345,8 @@ export default function VersionsModal({ onClose }: Props) {
         onClick={handleBackdropClick}
       >
         <div
-          className="relative w-full mx-4 flex flex-col"
-          style={{
-            maxWidth: "720px", maxHeight: "70vh",
-            background: "#13131a", border: "1px solid #2a2a35",
-            borderRadius: "12px", boxShadow: "0 20px 80px rgba(0,0,0,0.7)",
-          }}
+          className="modal-glass relative w-full mx-4 flex flex-col"
+          style={{ maxWidth: "720px", maxHeight: "70vh" }}
         >
           {/* Header */}
           <div className="flex items-center justify-between px-6 pt-5 pb-4 shrink-0">
@@ -464,12 +460,8 @@ export default function VersionsModal({ onClose }: Props) {
           style={{ background: "rgba(0,0,0,0.7)" }}
         >
           <div
-            className="mx-4 p-6 rounded-xl"
-            style={{
-              maxWidth: "400px", width: "100%",
-              background: "#13131a", border: "1px solid #2a2a35",
-              boxShadow: "0 20px 60px rgba(0,0,0,0.8)",
-            }}
+            className="modal-glass mx-4 p-6"
+            style={{ maxWidth: "400px", width: "100%" }}
           >
             <h3 className="text-white font-semibold font-sans text-[16px] mb-2">
               {restoreTarget.kind === "version" ? "Restore version" : "Restore auto-save"}

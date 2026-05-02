@@ -63,8 +63,7 @@ export default function NameInputDialog({
       onClick={handleBackdrop}
     >
       <div
-        className="w-full max-w-[400px] mx-4 rounded-xl shadow-[0_16px_64px_rgba(0,0,0,0.6)] p-6"
-        style={{ background: "#13131a", border: "1px solid #2a2a35" }}
+        className="modal-glass w-full max-w-[400px] mx-4 p-6"
       >
         <h2 className="text-white text-[18px] font-bold font-sans mb-2 leading-snug">
           {title}

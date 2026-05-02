@@ -133,8 +133,7 @@ export default function PropertiesDialog({ onClose }: Props) {
       onClick={handleBackdrop}
     >
       <div
-        className="w-full max-w-[480px] mx-4 rounded-xl shadow-[0_16px_64px_rgba(0,0,0,0.6)]"
-        style={{ background: "#13131a", border: "1px solid #2a2a35" }}
+        className="modal-glass w-full max-w-[480px] mx-4"
       >
         {/* Header */}
         <div className="flex items-center justify-between px-6 pt-5 pb-4" style={{ borderBottom: "1px solid #2a2a35" }}>

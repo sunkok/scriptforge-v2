@@ -82,7 +82,12 @@ export default function ViewSnapshotModal({ label, fountain, onClose }: Props) {
       {/* Header */}
       <div
         className="flex items-center justify-between px-6 py-3 shrink-0"
-        style={{ background: "#13131a", borderBottom: "1px solid #2a2a35" }}
+        style={{
+          background: "rgba(16, 16, 22, 0.88)",
+          backdropFilter: "blur(20px)",
+          WebkitBackdropFilter: "blur(20px)",
+          borderBottom: "1px solid rgba(255, 255, 255, 0.07)",
+        }}
       >
         <span
           className="text-white font-semibold font-sans text-[15px] truncate"

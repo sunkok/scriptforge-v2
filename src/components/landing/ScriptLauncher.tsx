@@ -134,7 +134,7 @@ export default function ScriptLauncher() {
   if (activeProfile) {
     return (
       <>
-      <div className="w-full max-w-[480px] bg-[var(--color-surface)] border border-[var(--color-border-strong)] rounded-xl overflow-hidden shadow-[0_8px_40px_rgba(0,0,0,0.5)]">
+      <div className="modal-glass w-full max-w-[480px] overflow-hidden">
         <div className="px-5 pt-5 pb-3 flex items-center justify-between">
           <span className="text-[10px] text-[var(--color-fg-secondary)] uppercase tracking-[0.12em] font-sans">
             Forge your scripts
@@ -255,7 +255,7 @@ export default function ScriptLauncher() {
 
   return (
     <>
-    <div className="w-full max-w-[480px] bg-[var(--color-surface)] border border-[var(--color-border-strong)] rounded-xl overflow-hidden shadow-[0_8px_40px_rgba(0,0,0,0.5)]">
+    <div className="modal-glass w-full max-w-[480px] overflow-hidden">
       <div className="px-5 pt-5 pb-3 text-[10px] text-[var(--color-fg-secondary)] uppercase tracking-[0.12em] font-sans">
         Who&apos;s writing?
       </div>

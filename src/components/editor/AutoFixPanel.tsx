@@ -91,13 +91,8 @@ export default function AutoFixPanel({ editor, onClose }: Props) {
 
       {/* Slideover */}
       <div
-        className="fixed top-0 right-0 bottom-0 z-50 flex flex-col"
-        style={{
-          width: "520px",
-          background: "#13131a",
-          borderLeft: "1px solid #2a2a35",
-          boxShadow: "-8px 0 40px rgba(0,0,0,0.5)",
-        }}
+        className="panel-glass-right fixed top-0 right-0 bottom-0 z-50 flex flex-col"
+        style={{ width: "520px" }}
       >
         {/* Header */}
         <div
