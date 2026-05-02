@@ -195,10 +195,10 @@ export default function EditorHeader() {
         <div className="flex items-center gap-3 min-w-0">
           <button
             onClick={() => guardedAction("going home", () => { setActiveProfile(null); router.push("/"); })}
-            className="shrink-0 p-1.5 -ml-1 rounded text-[var(--color-fg-secondary)] hover:text-indigo-400 transition-colors"
+            className="shrink-0 p-2 -ml-1 rounded text-[var(--color-fg-secondary)] hover:text-indigo-400 transition-colors"
             title="Home"
           >
-            <Home size={16} />
+            <Home size={19} />
           </button>
 
           <div className="flex flex-col justify-center min-w-0">
