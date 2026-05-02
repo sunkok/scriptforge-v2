@@ -9,8 +9,6 @@ import Placeholder from "@tiptap/extension-placeholder";
 import { PageNode } from "./PageNode";
 import { ScreenplayBehaviors } from "./ScreenplayBehaviors";
 import {
-  TitleBlock,
-  TitleField,
   SceneHeading,
   Action,
   Character,
@@ -35,30 +33,12 @@ const PLACEHOLDERS: Record<string, string> = {
   transition: "FADE OUT:",
 };
 
-const TITLE_FIELD_PLACEHOLDERS: Record<string, string> = {
-  title: "TITLE",
-  writtenby: "Written by",
-  author: "Author Name",
-  contact: "Contact Info",
-};
-
 const INITIAL_CONTENT = {
   type: "doc",
   content: [
     {
       type: "page",
-      content: [
-        {
-          type: "title_block",
-          content: [
-            { type: "title_field", attrs: { role: "title" } },
-            { type: "title_field", attrs: { role: "writtenby" } },
-            { type: "title_field", attrs: { role: "author" } },
-            { type: "title_field", attrs: { role: "contact" } },
-          ],
-        },
-        { type: "scene_heading" },
-      ],
+      content: [{ type: "scene_heading" }],
     },
   ],
 };
@@ -97,8 +77,6 @@ export default function ScreenplayEditor() {
       CustomDocument,
       StarterKit.configure({ document: false }),
       PageNode,
-      TitleBlock,
-      TitleField,
       SceneHeading,
       Action,
       Character,
@@ -108,12 +86,7 @@ export default function ScreenplayEditor() {
       ScreenplayBehaviors,
       Placeholder.configure({
         showOnlyCurrent: false,
-        placeholder: ({ node }) => {
-          if (node.type.name === "title_field") {
-            return TITLE_FIELD_PLACEHOLDERS[node.attrs.role as string] ?? "";
-          }
-          return PLACEHOLDERS[node.type.name] ?? "";
-        },
+        placeholder: ({ node }) => PLACEHOLDERS[node.type.name] ?? "",
       }),
     ],
     content: INITIAL_CONTENT,

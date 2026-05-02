@@ -118,44 +118,8 @@ body {
   margin-top: 1em;
 }
 
-/* ─── Title block ────────────────────────────────────────────────────────── */
-[data-type="title-block"] {
-  font-family: var(--font-courier-prime), 'Courier New', monospace;
-  font-size: 12pt;
-  line-height: 1.5;
-  color: #1a1a1a;
-  /* Push title text ~2in from content-area top (~25–30 % of the page). */
-  padding-top: 2in;
-  margin-bottom: 2em;
-}
-
-[data-type="title-block"] [data-role] {
-  margin: 0;
-  min-height: 1em;
-  white-space: pre-wrap;
-}
-
-[data-type="title-block"] [data-role="title"] {
-  text-align: center;
-  font-weight: bold;
-}
-
-[data-type="title-block"] [data-role="writtenby"] {
-  text-align: center;
-}
-
-[data-type="title-block"] [data-role="author"] {
-  text-align: center;
-  margin-bottom: 3em;
-}
-
-[data-type="title-block"] [data-role="contact"] {
-  text-align: right;
-}
-
 /* ─── Placeholder ────────────────────────────────────────────────────────── */
-.tiptap [data-element-type].is-empty::before,
-.tiptap [data-role].is-empty::before {
+.tiptap [data-element-type].is-empty::before {
   content: attr(data-placeholder);
   float: left;
   color: #9ca3af;
