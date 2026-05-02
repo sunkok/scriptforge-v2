@@ -14,6 +14,17 @@ export interface ScriptMetadata {
   createdAt: string; // ISO 8601
   updatedAt: string; // ISO 8601
   titleBlock?: ScriptTitleBlock;
+  ownerProfileId?: string;
+}
+
+export interface Profile {
+  profileId: string;
+  name: string;
+  createdAt: string;
+}
+
+export interface ProfilesIndex {
+  profiles: Profile[];
 }
 
 export interface ScriptIndex {

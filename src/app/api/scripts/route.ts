@@ -3,9 +3,21 @@ import { readIndex, upsertScript } from "@/lib/s3/script-index";
 import { putObject } from "@/lib/s3/client";
 import type { ScriptMetadata } from "@/lib/types";
 
-export async function GET() {
+const UUID_RE = /^[a-f0-9-]{36}$/;
+
+export async function GET(request: NextRequest) {
   try {
     const index = await readIndex();
+    const profileId = request.nextUrl.searchParams.get("profileId");
+    if (profileId) {
+      if (!UUID_RE.test(profileId)) {
+        return Response.json({ error: "Invalid profileId" }, { status: 400 });
+      }
+      const scripts = index.scripts.filter(
+        (s) => s.ownerProfileId === profileId
+      );
+      return Response.json({ scripts });
+    }
     return Response.json(index);
   } catch (err) {
     console.error("GET /api/scripts", err);
@@ -18,6 +30,7 @@ export async function POST(request: NextRequest) {
     const body = (await request.json()) as {
       title?: unknown;
       fountain?: unknown;
+      ownerProfileId?: unknown;
     };
 
     const title =
@@ -37,6 +50,17 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const ownerProfileId =
+      typeof body.ownerProfileId === "string"
+        ? body.ownerProfileId.trim()
+        : undefined;
+    if (ownerProfileId !== undefined && !UUID_RE.test(ownerProfileId)) {
+      return Response.json(
+        { error: "Invalid ownerProfileId" },
+        { status: 400 }
+      );
+    }
+
     const scriptId = crypto.randomUUID();
     const now = new Date().toISOString();
     const meta: ScriptMetadata = {
@@ -44,6 +68,7 @@ export async function POST(request: NextRequest) {
       title,
       createdAt: now,
       updatedAt: now,
+      ...(ownerProfileId !== undefined ? { ownerProfileId } : {}),
     };
 
     await Promise.all([

@@ -1,4 +1,4 @@
-import { getObject, objectExists, updateIndexWithRetry } from "./client";
+import { getObject, putObject, objectExists, updateIndexWithRetry } from "./client";
 import type { ScriptIndex, ScriptMetadata } from "@/lib/types";
 
 const INDEX_KEY = "scripts/index.json";
@@ -26,4 +26,27 @@ export async function removeScript(scriptId: string): Promise<void> {
   await updateIndexWithRetry<ScriptIndex>(INDEX_KEY, EMPTY_INDEX, (index) => ({
     scripts: index.scripts.filter((s) => s.scriptId !== scriptId),
   }));
+}
+
+export async function assignOwnerToUnowned(profileId: string): Promise<number> {
+  const index = await readIndex();
+  const unowned = index.scripts.filter((s) => !s.ownerProfileId);
+  if (unowned.length === 0) return 0;
+
+  await Promise.all(
+    unowned.map(async (script) => {
+      const key = `scripts/${script.scriptId}/metadata.json`;
+      const raw = await getObject(key);
+      const meta = JSON.parse(raw) as ScriptMetadata;
+      await putObject(key, JSON.stringify({ ...meta, ownerProfileId: profileId }));
+    })
+  );
+
+  await updateIndexWithRetry<ScriptIndex>(INDEX_KEY, EMPTY_INDEX, (idx) => ({
+    scripts: idx.scripts.map((s) =>
+      s.ownerProfileId ? s : { ...s, ownerProfileId: profileId }
+    ),
+  }));
+
+  return unowned.length;
 }
