@@ -6,7 +6,7 @@ const behaviorPluginKey = new PluginKey("screenplayBehaviors");
 
 // See docs/writing-flow.md for the full rationale behind these tables.
 
-// Tab: creates a NEW LINE below with the target type.
+// Tab: RELABELS the current line in place — no new line created.
 const TAB_MAP: Record<ElementType, ElementType> = {
   scene_heading: "action",
   action:        "character",
@@ -45,16 +45,11 @@ export const ScreenplayBehaviors = Extension.create({
 
   addKeyboardShortcuts() {
     return {
-      // Tab: done here → create new line below for next likely element.
+      // Tab: relabel CURRENT line to the target type — no new line.
       Tab: ({ editor }) => {
-        const { $anchor } = editor.state.selection;
-        const currentType = $anchor.parent.type.name;
+        const currentType = editor.state.selection.$anchor.parent.type.name;
         if (!isElementType(currentType)) return false;
-
-        const targetType = TAB_MAP[currentType];
-
-        editor.commands.splitBlock();
-        return editor.commands.setNode(targetType);
+        return editor.commands.setNode(TAB_MAP[currentType]);
       },
 
       // Shift+Tab: relabel CURRENT line to a different type — no new line.

@@ -17,13 +17,13 @@ Industry reference: Final Draft, Highland, Arc Studio Pro all use intelligent ne
 5. Dialogue — what the character says
 6. Transition — CUT TO:, FADE OUT., etc.
 
-## Key Distinction: Tab vs Shift+Tab
+## Key Distinction: Tab vs Shift+Tab vs Enter
 
-- **Tab** = "I'm done here, create a NEW LINE below for the next likely element"
-- **Shift+Tab** = "Wait, this CURRENT line should actually be a different type" — relabel current line in place
-- **Enter** = "I'm done here, create a NEW LINE below for default-next-thing"
+- **Tab** = "This CURRENT line should be a different type" — relabel current line forward in the cycle
+- **Shift+Tab** = "This CURRENT line should be a different type" — relabel current line backward to an alternative
+- **Enter** = "I'm done here, create a NEW LINE below for the default next element"
 
-Tab and Enter both create new lines. The difference: Enter goes to the most-conventional next element. Tab goes to the most-likely-but-context-aware-alternative element.
+Tab and Shift+Tab both relabel the current line in place (content preserved, cursor stays). Enter is the only key that creates a new line.
 
 ## ENTER — Continue forward (creates new line)
 
@@ -40,22 +40,21 @@ Tab and Enter both create new lines. The difference: Enter goes to the most-conv
 
 Note: empty Action/Character cases CONVERT the current line (no new line created), since user clearly didn't want that type.
 
-## TAB — Create new line for likely next element (creates new line)
+## TAB — Relabel current line (no new line)
 
-| In | Pressing Tab creates new line as |
+| In | Pressing Tab relabels current line to |
 |---|---|
 | Scene Heading | Action |
 | Action | Character |
 | Character | Parenthetical |
 | Parenthetical | Dialogue |
-| Dialogue | Character (next speaker, same scene) |
+| Dialogue | Character (cycle back for next speaker) |
 | Transition | Scene Heading |
 
 Example:
-- User types "JOHN" (Character mode), presses Tab
-- New line below appears in Parenthetical mode (already showing "()" with cursor between parens)
-- User types "whispered", presses Enter
-- New line below in Dialogue mode for John's actual line
+- User types "She walks in." (Action mode), presses Tab
+- Same line is now Character mode — content stays, type indicator changes
+- Press Tab again → Parenthetical, press Tab again → Dialogue
 
 ## SHIFT+TAB — Relabel current line (no new line)
 
@@ -85,14 +84,13 @@ Same as Shift+Tab in spirit — relabels current line to a specific type.
 
 - Empty Action + Enter → converts current line to Character (no new line)
 - Empty Character + Enter → converts current line to Action (no new line)
-- Tab on Character → creates new Parenthetical line, cursor between auto-inserted "()"
-- Tab on any other element → creates new line of target type, cursor at start
+- Tab on any element → relabels current line to target type, content preserved
 
 ## Reasoning Behind Choices
 
-**Why Tab from Action creates a new Character line:** After describing action, the most common next element is a character speaking. Enter on Action continues Action. Tab on Action says "done with action, someone's about to speak."
+**Why Tab from Action relabels to Character:** If you typed action and realize "actually this should be a character cue," Tab relabels it without retyping. Tab cycles forward through the most natural progression.
 
-**Why Tab from Character creates a new Parenthetical line:** Enter from Character already goes to Dialogue (the common case). Tab offers the alternative parenthetical path. The new Parenthetical line is pre-filled with "()" and cursor between, ready for typing.
+**Why Tab from Character relabels to Parenthetical:** Enter from Character goes to Dialogue (the common path). Tab offers "wait, I want a parenthetical first" — relabels the character line to Parenthetical. Type the note, then Enter for Dialogue.
 
 **Why Shift+Tab relabels rather than navigates:** Going to a previous existing line is what arrow keys do. Shift+Tab is for fixing the current line's type without retyping its content.
 
