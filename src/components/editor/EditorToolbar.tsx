@@ -144,6 +144,9 @@ export default function EditorToolbar({ editor }: Props) {
 
         {/* Center: element type pills + formatting buttons */}
         <div className="flex items-center gap-2">
+          <span className="text-[11px] font-sans text-[var(--color-fg-secondary)] opacity-50 whitespace-nowrap select-none hidden lg:block">
+            Press tab to cycle
+          </span>
           <div className="flex items-center gap-0.5 bg-[var(--color-surface)] rounded-md p-0.5">
             {TOOLBAR_ELEMENTS.map((type) => {
               const active = type === currentElementType;
