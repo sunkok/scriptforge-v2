@@ -5,11 +5,13 @@ import { useRouter } from "next/navigation";
 import {
   ChevronDown,
   Home,
+  Moon,
   Plus,
   FolderOpen,
   History,
   SlidersHorizontal,
   Printer,
+  Sun,
 } from "lucide-react";
 import { useScriptForgeStore } from "@/lib/store";
 import type { ScriptMetadata } from "@/lib/types";
@@ -42,6 +44,8 @@ export default function EditorHeader() {
   const setIsVersionsModalOpen = useScriptForgeStore((s) => s.setIsVersionsModalOpen);
   const activeProfile = useScriptForgeStore((s) => s.activeProfile);
   const setActiveProfile = useScriptForgeStore((s) => s.setActiveProfile);
+  const editorTheme = useScriptForgeStore((s) => s.editorTheme);
+  const setEditorTheme = useScriptForgeStore((s) => s.setEditorTheme);
 
   const [openModalVisible, setOpenModalVisible] = useState(false);
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
@@ -271,6 +275,13 @@ export default function EditorHeader() {
               )}
             </div>
           )}
+          <button
+            onClick={() => setEditorTheme(editorTheme === "light" ? "dark" : "light")}
+            className="p-1.5 rounded text-orange-400 hover:text-orange-300 transition-colors shrink-0"
+            title={editorTheme === "light" ? "Switch to dark mode" : "Switch to light mode"}
+          >
+            {editorTheme === "light" ? <Moon size={15} /> : <Sun size={15} />}
+          </button>
           <HeaderButton
             icon={<Plus size={14} />}
             label="New"
