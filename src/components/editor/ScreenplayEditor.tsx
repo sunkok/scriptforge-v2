@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useRef } from "react";
 import { useEditor, EditorContent } from "@tiptap/react";
 import Document from "@tiptap/extension-document";
 import StarterKit from "@tiptap/starter-kit";
@@ -14,6 +15,9 @@ import {
   Parenthetical,
   Transition,
 } from "@/lib/editor/nodes";
+import { PaginationEngine } from "@/lib/pagination/engine";
+import { PaginationEngineContext } from "./PaginationContext";
+import { useScriptForgeStore } from "@/lib/store";
 
 const CustomDocument = Document.extend({ content: "page+" });
 
@@ -37,6 +41,13 @@ const INITIAL_CONTENT = {
 };
 
 export default function ScreenplayEditor() {
+  const [engine, setEngine] = useState<PaginationEngine | null>(null);
+  const [activePage, setActivePage] = useState(1);
+  // Keep an imperative ref for cleanup in onDestroy (setEngine is async).
+  const engineRef = useRef<PaginationEngine | null>(null);
+  const pageCount = useScriptForgeStore((s) => s.pageCount);
+  const setPageCount = useScriptForgeStore((s) => s.setPageCount);
+
   const editor = useEditor({
     extensions: [
       CustomDocument,
@@ -56,11 +67,48 @@ export default function ScreenplayEditor() {
     ],
     content: INITIAL_CONTENT,
     immediatelyRender: false,
+
+    onCreate({ editor }) {
+      const eng = new PaginationEngine();
+      eng.setEditor(editor);
+      engineRef.current = eng;
+      setEngine(eng);
+      setPageCount(1);
+    },
+
+    onDestroy() {
+      engineRef.current?.destroy();
+      engineRef.current = null;
+    },
+
+    onUpdate({ editor }) {
+      let count = 0;
+      editor.state.doc.forEach((node) => {
+        if (node.type.name === "page") count++;
+      });
+      setPageCount(count);
+    },
+
+    onSelectionUpdate({ editor }) {
+      const { $anchor } = editor.state.selection;
+      let page = 1;
+      editor.state.doc.forEach((node, offset) => {
+        if (node.type.name !== "page") return;
+        // If the anchor is past this page's end, the cursor is on a later page.
+        if ($anchor.pos > offset + node.nodeSize) page++;
+      });
+      setActivePage(page);
+    },
   });
 
   return (
-    <div className="h-screen bg-[var(--color-canvas)] overflow-y-auto py-10">
-      <EditorContent editor={editor} />
-    </div>
+    <PaginationEngineContext.Provider value={engine}>
+      <div className="h-screen bg-[var(--color-canvas)] overflow-y-auto py-10">
+        <EditorContent editor={editor} />
+      </div>
+      <div className="fixed bottom-4 right-4 text-indigo-400 text-xs font-mono pointer-events-none select-none">
+        {activePage} / {pageCount}
+      </div>
+    </PaginationEngineContext.Provider>
   );
 }
