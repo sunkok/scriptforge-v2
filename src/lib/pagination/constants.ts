@@ -1,0 +1,11 @@
+export const PAGE_WIDTH_IN = 8.5;
+export const PAGE_HEIGHT_IN = 11;
+export const MARGIN_TOP_IN = 1;
+export const MARGIN_BOTTOM_IN = 1;
+export const MARGIN_LEFT_IN = 1.5;
+export const MARGIN_RIGHT_IN = 1;
+export const CONTENT_WIDTH_IN = 6;   // 8.5 - 1.5 - 1
+export const CONTENT_HEIGHT_IN = 9;  // 11 - 1 - 1
+export const FONT_FAMILY = "Courier Prime";
+export const FONT_SIZE_PT = 12;
+export const LINE_HEIGHT = 1;
