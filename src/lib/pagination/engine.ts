@@ -192,10 +192,21 @@ export class PaginationEngine {
       const p2Children = Array.from(p2PmContent.children) as HTMLElement[];
       // p1VirtualHeight tracks P1's height as we speculatively add blocks.
       let p1VirtualHeight = p1El.getBoundingClientRect().height;
+      // CSS margin-bottom of the last child collapses through the parent when
+      // there is no border/padding-bottom, so it is excluded from the measured
+      // height. Add it back so we don't move blocks that will immediately overflow.
+      const p1PmContent = p1El.firstElementChild;
+      const p1LastChild = p1PmContent?.lastElementChild as HTMLElement | null;
+      if (p1LastChild) {
+        p1VirtualHeight += parseFloat(getComputedStyle(p1LastChild).marginBottom) || 0;
+      }
       let p2Consumed = 0; // how many of p2's blocks have been virtually moved
 
       while (p2Consumed < p2Children.length) {
-        const blockHeight = p2Children[p2Consumed].getBoundingClientRect().height;
+        const block = p2Children[p2Consumed];
+        // The candidate becomes P1's last child, so its margin-bottom will
+        // collapse — check height only (not height + margin).
+        const blockHeight = block.getBoundingClientRect().height;
         if (p1VirtualHeight + blockHeight > this.contentHeightPx) break;
 
         // Re-resolve positions through tr's accumulated mapping each iteration.
@@ -218,7 +229,9 @@ export class PaginationEngine {
         const mappedP2Pos = tr.mapping.map(p2StartPos);
         tr.delete(mappedP2Pos + 1, mappedP2Pos + 1 + blockToMove.nodeSize);
 
-        p1VirtualHeight += blockHeight;
+        // Block is no longer P1's last child — its margin-bottom now contributes
+        // to layout spacing, so include it in the running height tally.
+        p1VirtualHeight += blockHeight + (parseFloat(getComputedStyle(block).marginBottom) || 0);
         p2Consumed++;
         changed = true;
       }

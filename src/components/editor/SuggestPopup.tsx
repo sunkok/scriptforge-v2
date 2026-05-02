@@ -17,6 +17,9 @@ const TRANSITION_PRESETS = [
   "DISSOLVE TO:",
   "SMASH CUT TO:",
   "MATCH CUT TO:",
+  "JUMP CUT TO:",
+  "TIME CUT:",
+  "INTERCUT WITH:",
 ];
 
 type Props = {
@@ -59,6 +62,13 @@ export default function SuggestPopup({ editor, state, onInsert, onDismiss }: Pro
         e.stopPropagation();
         e.preventDefault();
         onInsert(items[selectedIndex]);
+      } else if (e.key >= "1" && e.key <= "9") {
+        const idx = parseInt(e.key, 10) - 1;
+        if (idx < items.length) {
+          e.stopPropagation();
+          e.preventDefault();
+          onInsert(items[idx]);
+        }
       }
     };
 
@@ -70,18 +80,25 @@ export default function SuggestPopup({ editor, state, onInsert, onDismiss }: Pro
 
   return (
     <div
-      className="fixed z-50 rounded shadow-lg py-1 overflow-hidden"
+      className="fixed z-50 rounded-md overflow-hidden py-1"
       style={{
         top: state.top + 6,
         left: state.left,
-        background: "#4f46e5",
+        background: "#1a1a1f",
+        border: "1px solid #2a2a35",
+        boxShadow: "0 8px 24px rgba(0,0,0,0.5)",
+        minWidth: "180px",
       }}
     >
       {items.map((item, i) => (
         <button
           key={item}
-          className="block w-full text-left px-3 py-1 text-xs text-white font-sans transition-colors"
-          style={{ background: i === selectedIndex ? "#6366f1" : undefined }}
+          className="flex items-center w-full text-left text-[13px] font-sans gap-2.5 transition-colors"
+          style={{
+            padding: "5px 12px 5px 9px",
+            background: i === selectedIndex ? "#2a2a30" : "transparent",
+            borderLeft: i === selectedIndex ? "3px solid #6366f1" : "3px solid transparent",
+          }}
           onMouseEnter={() => setSelectedIndex(i)}
           onMouseDown={(e) => {
             // Prevent editor blur so the insertion lands at the right position.
@@ -89,7 +106,13 @@ export default function SuggestPopup({ editor, state, onInsert, onDismiss }: Pro
             onInsert(item);
           }}
         >
-          {item}
+          <span
+            className="font-mono text-[12px] shrink-0"
+            style={{ color: "#6b6b76", minWidth: "12px" }}
+          >
+            {i + 1}
+          </span>
+          <span style={{ color: "white" }}>{item.trim()}</span>
         </button>
       ))}
     </div>

@@ -138,6 +138,13 @@ body {
 .annotation-highlight:hover {
   background-color: rgba(99, 102, 241, 0.28);
 }
+@keyframes annotationPulse {
+  0%   { background-color: rgba(99, 102, 241, 0.55); }
+  100% { background-color: rgba(99, 102, 241, 0.18); }
+}
+.annotation-highlight.pulse {
+  animation: annotationPulse 1s ease-out forwards;
+}
 
 /* ─── Print styles ───────────────────────────────────────────────────────── */
 @page {

@@ -6,6 +6,7 @@ import { X, Copy, Check } from "lucide-react";
 import { useScriptForgeStore } from "@/lib/store";
 import type { AutosaveSnapshot, ShareRecord, VersionMetadata } from "@/lib/types";
 import { relativeTime } from "@/lib/relative-time";
+import WriterAnnotationPanel from "@/components/editor/WriterAnnotationPanel";
 
 type Tab = "versions" | "autosaves" | "shares";
 
@@ -110,6 +111,12 @@ export default function VersionsModal({ onClose }: Props) {
 
   // Revoke loading
   const [revokingToken, setRevokingToken]   = useState<string | null>(null);
+
+  // Comments panel
+  const [commentsVersionId, setCommentsVersionId] = useState<string | null>(null);
+  const commentsVersion = commentsVersionId
+    ? (versions.find((v) => v.versionId === commentsVersionId) ?? null)
+    : null;
 
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -322,6 +329,7 @@ export default function VersionsModal({ onClose }: Props) {
               onCloseShareDialog={closeShareDialog}
               onCreateShare={handleCreateShare}
               onCopyShareLink={handleCopyShareLink}
+              onViewComments={setCommentsVersionId}
             />
           )}
 
@@ -339,6 +347,15 @@ export default function VersionsModal({ onClose }: Props) {
           )}
         </div>
       </div>
+
+      {commentsVersionId && currentScriptId && commentsVersion && (
+        <WriterAnnotationPanel
+          scriptId={currentScriptId}
+          versionId={commentsVersionId}
+          versionLabel={commentsVersion.label}
+          onClose={() => setCommentsVersionId(null)}
+        />
+      )}
     </div>,
     document.body
   );
@@ -352,6 +369,7 @@ function VersionsTab({
   shareCreating, shareResult, shareCopied,
   onOpenSaveForm, onSave, onCancelSave,
   onOpenShareDialog, onCloseShareDialog, onCreateShare, onCopyShareLink,
+  onViewComments,
 }: {
   versions: VersionMetadata[];
   loading: boolean;
@@ -375,6 +393,7 @@ function VersionsTab({
   onCloseShareDialog: () => void;
   onCreateShare: () => void;
   onCopyShareLink: (url: string) => void;
+  onViewComments: (versionId: string) => void;
 }) {
   return (
     <>
@@ -425,6 +444,7 @@ function VersionsTab({
               flash={v.versionId === flashVersionId}
               shareActive={shareDialogVersionId === v.versionId}
               onShare={() => onOpenShareDialog(v.versionId)}
+              onViewComments={() => onViewComments(v.versionId)}
             />
             {shareDialogVersionId === v.versionId && (
               <ShareInlineForm
@@ -446,12 +466,13 @@ function VersionsTab({
 }
 
 function VersionRow({
-  version, flash, shareActive, onShare,
+  version, flash, shareActive, onShare, onViewComments,
 }: {
   version: VersionMetadata;
   flash: boolean;
   shareActive: boolean;
   onShare: () => void;
+  onViewComments: () => void;
 }) {
   return (
     <div
@@ -478,9 +499,9 @@ function VersionRow({
       )}
 
       <div className="flex items-center gap-0.5 shrink-0">
-        <button onClick={() => console.log("View version", version.versionId)}
+        <button onClick={onViewComments}
           className="px-2.5 py-1.5 text-[12px] font-sans text-[#6b6b76] rounded hover:text-indigo-400 transition-colors"
-        >View</button>
+        >Comments</button>
         <button onClick={onShare}
           className={`px-2.5 py-1.5 text-[12px] font-sans rounded transition-colors ${
             shareActive ? "text-indigo-400" : "text-[#6b6b76] hover:text-indigo-400"
