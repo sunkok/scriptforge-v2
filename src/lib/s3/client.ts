@@ -14,16 +14,16 @@ function requireEnv(name: string): string {
 
 function getClient() {
   return new S3Client({
-    region: requireEnv("AWS_REGION"),
+    region: requireEnv("APP_AWS_REGION"),
     credentials: {
-      accessKeyId: requireEnv("AWS_ACCESS_KEY_ID"),
-      secretAccessKey: requireEnv("AWS_SECRET_ACCESS_KEY"),
+      accessKeyId: requireEnv("APP_AWS_ACCESS_KEY_ID"),
+      secretAccessKey: requireEnv("APP_AWS_SECRET_ACCESS_KEY"),
     },
   });
 }
 
 function getBucket() {
-  return requireEnv("AWS_S3_BUCKET");
+  return requireEnv("APP_AWS_S3_BUCKET");
 }
 
 export async function putObject(
