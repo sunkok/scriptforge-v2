@@ -21,6 +21,61 @@ const EMPTY_DOC: JSONContent = {
   content: [{ type: "page", content: [{ type: "scene_heading" }] }],
 };
 
+// Fountain inline markup patterns (priority order: bold-italic before bold before italic).
+// Capture groups: [1]=bold+italic content, [2]=bold, [3]=italic, [4]=underline.
+const INLINE_MARK_RE = /\*{3}(.+?)\*{3}|\*{2}(.+?)\*{2}|\*(.+?)\*|_([^_\n]+)_/g;
+
+/**
+ * Parses a Fountain token's text (which may contain **bold**, *italic*, _underline_
+ * markup) into an array of Tiptap text nodes with the appropriate marks.
+ */
+function parseInlineMarks(raw: string): JSONContent[] {
+  const nodes: JSONContent[] = [];
+  let lastIndex = 0;
+
+  const re = new RegExp(INLINE_MARK_RE.source, "g");
+  let match: RegExpExecArray | null;
+
+  while ((match = re.exec(raw)) !== null) {
+    if (match.index > lastIndex) {
+      nodes.push({ type: "text", text: raw.slice(lastIndex, match.index) });
+    }
+
+    const [full, boldItalicContent, boldContent, italicContent, underlineContent] = match;
+    const marks: { type: string }[] = [];
+    let content = "";
+
+    if (boldItalicContent !== undefined) {
+      content = boldItalicContent;
+      marks.push({ type: "bold" }, { type: "italic" });
+    } else if (boldContent !== undefined) {
+      content = boldContent;
+      marks.push({ type: "bold" });
+    } else if (italicContent !== undefined) {
+      content = italicContent;
+      marks.push({ type: "italic" });
+    } else if (underlineContent !== undefined) {
+      content = underlineContent;
+      marks.push({ type: "underline" });
+    }
+
+    if (content) {
+      nodes.push(marks.length > 0
+        ? { type: "text", text: content, marks }
+        : { type: "text", text: content }
+      );
+    }
+
+    lastIndex = match.index + full.length;
+  }
+
+  if (lastIndex < raw.length) {
+    nodes.push({ type: "text", text: raw.slice(lastIndex) });
+  }
+
+  return nodes.length > 0 ? nodes : [{ type: "text", text: raw }];
+}
+
 /**
  * Parses a Fountain-format string and returns a Tiptap JSONContent document
  * using v2's separate node types (scene_heading, action, character, etc.)
@@ -47,7 +102,7 @@ export function fountainToTiptap(fountainText: string): JSONContent {
 
     nodes.push({
       type: nodeType,
-      content: [{ type: "text", text }],
+      content: parseInlineMarks(text),
     });
   }
 

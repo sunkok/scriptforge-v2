@@ -1,8 +1,9 @@
 "use client";
 
 import { useRef } from "react";
-import { Upload, Download, Wand2 } from "lucide-react";
+import { Upload, Download, Wand2, Bold, Italic, Underline, Strikethrough } from "lucide-react";
 import type { Editor } from "@tiptap/core";
+import { useEditorState } from "@tiptap/react";
 import { useScriptForgeStore } from "@/lib/store";
 import { ELEMENT_DISPLAY_NAMES, type ElementType } from "@/lib/editor/types";
 import { fountainToTiptap } from "@/lib/fountain/parser";
@@ -28,6 +29,17 @@ export default function EditorToolbar({ editor }: Props) {
   const setTitleBlock = useScriptForgeStore((s) => s.setTitleBlock);
   const setScriptMeta = useScriptForgeStore((s) => s.setScriptMeta);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Reactive active-mark state — updates whenever selection or doc changes.
+  const { isBold, isItalic, isUnderline, isStrike } = useEditorState({
+    editor,
+    selector: (ctx) => ({
+      isBold: ctx.editor?.isActive("bold") ?? false,
+      isItalic: ctx.editor?.isActive("italic") ?? false,
+      isUnderline: ctx.editor?.isActive("underline") ?? false,
+      isStrike: ctx.editor?.isActive("strike") ?? false,
+    }),
+  }) ?? { isBold: false, isItalic: false, isUnderline: false, isStrike: false };
 
   const handleSetElement = (type: ElementType) => {
     if (!editor) return;
@@ -95,7 +107,8 @@ export default function EditorToolbar({ editor }: Props) {
       />
 
       <div className="flex items-center justify-between px-4 h-12 shrink-0 border-b border-[var(--color-border-subtle)]">
-        <div className="flex items-center gap-0.5 w-[160px]">
+        {/* Left: Load + Download */}
+        <div className="flex items-center gap-0.5 w-[100px]">
           <ToolButton
             icon={<Upload size={13} />}
             label="Load"
@@ -109,6 +122,7 @@ export default function EditorToolbar({ editor }: Props) {
           />
         </div>
 
+        {/* Center: element type pills */}
         <div className="flex items-center gap-0.5 bg-[var(--color-surface)] rounded-md p-0.5">
           {TOOLBAR_ELEMENTS.map((type) => {
             const active = type === currentElementType;
@@ -131,7 +145,41 @@ export default function EditorToolbar({ editor }: Props) {
           })}
         </div>
 
-        <div className="flex items-center justify-end w-[160px]">
+        {/* Right: formatting buttons + Auto-fix */}
+        <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1">
+            <FormatButton
+              icon={<Bold size={12} />}
+              label="Bold (⌘B)"
+              active={isBold}
+              onClick={() => editor?.chain().focus().toggleBold().run()}
+              disabled={!editor}
+            />
+            <FormatButton
+              icon={<Italic size={12} />}
+              label="Italic (⌘I)"
+              active={isItalic}
+              onClick={() => editor?.chain().focus().toggleItalic().run()}
+              disabled={!editor}
+            />
+            <FormatButton
+              icon={<Underline size={12} />}
+              label="Underline (⌘U)"
+              active={isUnderline}
+              onClick={() => editor?.chain().focus().toggleUnderline().run()}
+              disabled={!editor}
+            />
+            <FormatButton
+              icon={<Strikethrough size={12} />}
+              label="Strikethrough (⌘⇧X)"
+              active={isStrike}
+              onClick={() => editor?.chain().focus().toggleStrike().run()}
+              disabled={!editor}
+            />
+          </div>
+
+          <div className="w-px h-4 bg-[var(--color-border-subtle)]" />
+
           <ToolButton
             icon={<Wand2 size={13} />}
             label="Auto-fix"
@@ -172,6 +220,36 @@ function ToolButton({
     >
       {icon}
       {label}
+    </button>
+  );
+}
+
+function FormatButton({
+  icon,
+  label,
+  active,
+  onClick,
+  disabled,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  active: boolean;
+  onClick: () => void;
+  disabled?: boolean;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      disabled={disabled}
+      title={label}
+      className={[
+        "w-7 h-7 flex items-center justify-center rounded transition-colors disabled:opacity-40",
+        active
+          ? "bg-orange-500/30 border border-orange-400 text-[var(--color-fg-primary)]"
+          : "border border-orange-500 text-[var(--color-fg-secondary)] hover:bg-orange-500/10 hover:text-[var(--color-fg-primary)]",
+      ].join(" ")}
+    >
+      {icon}
     </button>
   );
 }

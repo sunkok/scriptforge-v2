@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { useEditor, EditorContent } from "@tiptap/react";
 import Document from "@tiptap/extension-document";
 import StarterKit from "@tiptap/starter-kit";
+import Underline from "@tiptap/extension-underline";
 import Placeholder from "@tiptap/extension-placeholder";
 import { PageNode } from "@/components/editor/PageNode";
 import {
@@ -155,6 +156,7 @@ export default function PrintClient() {
       Dialogue,
       Parenthetical,
       Transition,
+      Underline,
       Placeholder.configure({ showOnlyCurrent: false, placeholder: () => "" }),
     ],
     content: {

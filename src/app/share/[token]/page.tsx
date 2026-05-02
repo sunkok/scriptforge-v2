@@ -4,7 +4,8 @@ import { use, useCallback, useEffect, useRef, useState } from "react";
 import { useEditor, EditorContent } from "@tiptap/react";
 import Document from "@tiptap/extension-document";
 import StarterKit from "@tiptap/starter-kit";
-import { Eye } from "lucide-react";
+import Underline from "@tiptap/extension-underline";
+import { Eye, Moon, Sun } from "lucide-react";
 import { PageNode } from "@/components/editor/PageNode";
 import { PaginationEngineContext } from "@/components/editor/PaginationContext";
 import {
@@ -721,6 +722,7 @@ function ReviewerView({
     extensions: [
       CustomDocument,
       StarterKit.configure({ document: false }),
+      Underline,
       PageNode,
       SceneHeading,
       Action,
@@ -928,10 +930,13 @@ export default function SharePage({
   const [data, setData] = useState<ShareData | null>(null);
   const [error, setError] = useState<ErrorState | null>(null);
   const [reviewerName, setReviewerName] = useState<string | null>(null);
+  const [shareTheme, setShareTheme] = useState<"light" | "dark">("light");
 
   useEffect(() => {
     const stored = localStorage.getItem(REVIEWER_NAME_KEY);
     if (stored) setReviewerName(stored);
+    const theme = localStorage.getItem("editorTheme") as "light" | "dark" | null;
+    if (theme) setShareTheme(theme);
   }, []);
 
   useEffect(() => {
@@ -976,6 +981,12 @@ export default function SharePage({
     setReviewerName(null);
   };
 
+  const toggleShareTheme = () => {
+    const next = shareTheme === "light" ? "dark" : "light";
+    setShareTheme(next);
+    localStorage.setItem("editorTheme", next);
+  };
+
   if (loading) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-[#0f0f14]">
@@ -1012,7 +1023,7 @@ export default function SharePage({
   }
 
   return (
-    <div className="h-screen flex flex-col bg-[#0f0f14]">
+    <div className={`h-screen flex flex-col bg-[#0f0f14]${shareTheme === "dark" ? " theme-dark" : ""}`}>
       {/* Header */}
       <header className="flex items-center justify-between px-5 shrink-0 h-14 bg-[#0b0d11] border-b border-[var(--color-border-subtle)]">
         <div className="flex items-center gap-3 min-w-0">
@@ -1055,6 +1066,14 @@ export default function SharePage({
               </button>
             </div>
           )}
+          <button
+            onClick={toggleShareTheme}
+            className="p-1.5 rounded transition-colors"
+            style={{ color: "#6b6b76" }}
+            title={shareTheme === "light" ? "Switch to dark mode" : "Switch to light mode"}
+          >
+            {shareTheme === "light" ? <Moon size={14} /> : <Sun size={14} />}
+          </button>
           <div
             className="flex items-center gap-1.5 text-[12px] font-sans"
             style={{ color: "#6b6b76" }}

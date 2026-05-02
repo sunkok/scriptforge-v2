@@ -1,10 +1,38 @@
 import type { JSONContent } from "@tiptap/core";
 import type { ScriptTitleBlock } from "@/lib/types";
 
+/**
+ * Converts a Tiptap text node to a Fountain-formatted string, wrapping the
+ * text with the appropriate Fountain inline markup for its marks.
+ * Non-text nodes recurse into their content (marks-unaware).
+ */
 function getNodeText(node: JSONContent): string {
-  if (node.type === "text") return node.text ?? "";
-  if (!node.content) return "";
-  return node.content.map(getNodeText).join("");
+  if (node.type !== "text") {
+    if (!node.content) return "";
+    return node.content.map(getNodeText).join("");
+  }
+
+  let text = node.text ?? "";
+  const markTypes = (node.marks ?? []).map((m) => m.type as string);
+
+  const bold = markTypes.includes("bold");
+  const italic = markTypes.includes("italic");
+  const underline = markTypes.includes("underline");
+  // Strikethrough has no standard Fountain syntax; emit plain text.
+
+  if (bold && italic) {
+    text = `***${text}***`;
+  } else if (bold) {
+    text = `**${text}**`;
+  } else if (italic) {
+    text = `*${text}*`;
+  }
+
+  if (underline) {
+    text = `_${text}_`;
+  }
+
+  return text;
 }
 
 function buildTitleSection(tb: ScriptTitleBlock): string {
@@ -27,6 +55,7 @@ function buildTitleSection(tb: ScriptTitleBlock): string {
 /**
  * Converts a v2 Tiptap document (doc > page+ > block+) into a Fountain string.
  * Switches on node.type directly (v2 uses separate node types, not attrs).
+ * Inline marks (bold, italic, underline) are emitted as Fountain markup.
  */
 export function tiptapToFountain(doc: JSONContent, titleBlock?: ScriptTitleBlock): string {
   if (!doc.content) return "";

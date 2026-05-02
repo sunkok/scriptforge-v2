@@ -6,6 +6,7 @@ import { useEditor, EditorContent } from "@tiptap/react";
 import type { Editor } from "@tiptap/core";
 import Document from "@tiptap/extension-document";
 import StarterKit from "@tiptap/starter-kit";
+import Underline from "@tiptap/extension-underline";
 import Placeholder from "@tiptap/extension-placeholder";
 import { PageNode } from "./PageNode";
 import { ScreenplayBehaviors } from "./ScreenplayBehaviors";
@@ -94,6 +95,8 @@ export default function ScreenplayEditor({ scriptId }: Props) {
   const activeProfile = useScriptForgeStore((s) => s.activeProfile);
   const setActiveProfile = useScriptForgeStore((s) => s.setActiveProfile);
   const profiles = useScriptForgeStore((s) => s.profiles);
+  const editorTheme = useScriptForgeStore((s) => s.editorTheme);
+  const setEditorTheme = useScriptForgeStore((s) => s.setEditorTheme);
 
   // Stable refs so Tiptap callbacks always see current values.
   const scriptIdRef = useRef(scriptId);
@@ -115,6 +118,7 @@ export default function ScreenplayEditor({ scriptId }: Props) {
       Parenthetical,
       Transition,
       ScreenplayBehaviors,
+      Underline,
       Placeholder.configure({
         showOnlyCurrent: false,
         placeholder: ({ node }) => PLACEHOLDERS[node.type.name] ?? "",
@@ -261,6 +265,12 @@ export default function ScreenplayEditor({ scriptId }: Props) {
     };
   }, []);
 
+  // Hydrate paper theme from localStorage on mount.
+  useEffect(() => {
+    const stored = localStorage.getItem("editorTheme") as "light" | "dark" | null;
+    if (stored && stored !== editorTheme) setEditorTheme(stored);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   // Register an immediate-save callback in the store so EditorHeader can trigger it.
   useEffect(() => {
     if (!editor) return;
@@ -352,7 +362,7 @@ export default function ScreenplayEditor({ scriptId }: Props) {
 
   return (
     <PaginationEngineContext.Provider value={engine}>
-      <div className="h-screen flex flex-col bg-[var(--color-canvas)]">
+      <div className={`h-screen flex flex-col bg-[var(--color-canvas)] ${editorTheme === "dark" ? "theme-dark" : ""}`}>
         <EditorHeader />
         <EditorToolbar editor={editor} />
         <div className="flex-1 overflow-y-auto py-10">
