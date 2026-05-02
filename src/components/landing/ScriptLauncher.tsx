@@ -2,10 +2,11 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Check, ChevronRight, FileText, Pencil, Plus, User, X } from "lucide-react";
+import { Check, ChevronRight, FileText, Pencil, Plus, Trash2, User, X } from "lucide-react";
 import type { Profile, ScriptMetadata } from "@/lib/types";
 import { relativeTime } from "@/lib/relative-time";
 import { useScriptForgeStore } from "@/lib/store";
+import ConfirmDialog from "@/components/ui/ConfirmDialog";
 
 export default function ScriptLauncher() {
   const router = useRouter();
@@ -17,6 +18,7 @@ export default function ScriptLauncher() {
   const [profilesLoading, setProfilesLoading] = useState(true);
   const [scripts, setScripts] = useState<ScriptMetadata[] | null>(null);
   const [creating, setCreating] = useState(false);
+  const [pendingDelete, setPendingDelete] = useState<ScriptMetadata | null>(null);
 
   // Profile creation
   const [addingProfile, setAddingProfile] = useState(false);
@@ -135,6 +137,7 @@ export default function ScriptLauncher() {
 
   if (activeProfile) {
     return (
+      <>
       <div className="w-full max-w-[480px] bg-[var(--color-surface)] border border-[var(--color-border-strong)] rounded-xl overflow-hidden shadow-[0_8px_40px_rgba(0,0,0,0.5)]">
         <div className="px-5 pt-5 pb-3 flex items-center justify-between">
           <span className="text-[10px] text-[var(--color-fg-secondary)] uppercase tracking-[0.12em] font-sans">
@@ -180,6 +183,23 @@ export default function ScriptLauncher() {
               <span className="text-[var(--color-fg-secondary)] text-[12px] font-sans shrink-0">
                 {relativeTime(script.updatedAt)}
               </span>
+              <span
+                role="button"
+                tabIndex={0}
+                onClick={(e) => { e.stopPropagation(); setPendingDelete(script); }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setPendingDelete(script);
+                  }
+                }}
+                className="shrink-0 p-1.5 rounded opacity-0 group-hover:opacity-100 transition-colors hover:text-red-400"
+                style={{ color: "#6b6b76" }}
+                aria-label="Delete script"
+              >
+                <Trash2 size={14} />
+              </span>
               <ChevronRight
                 size={14}
                 className="text-[var(--color-fg-secondary)] shrink-0 group-hover:text-indigo-400 transition-colors"
@@ -204,6 +224,26 @@ export default function ScriptLauncher() {
           </span>
         </button>
       </div>
+
+      {pendingDelete && (
+        <ConfirmDialog
+          title="Delete script?"
+          body={`Are you sure you want to delete "${pendingDelete.title || "Untitled"}"? This will permanently delete the script and all its versions, autosaves, and shares. This cannot be undone.`}
+          confirmLabel="Delete"
+          confirmVariant="danger"
+          onConfirm={async () => {
+            const res = await fetch(`/api/scripts/${pendingDelete.scriptId}`, { method: "DELETE" });
+            if (!res.ok) throw new Error("Failed to delete");
+            setScripts(null);
+            fetch(`/api/scripts?profileId=${activeProfile!.profileId}`)
+              .then((r) => r.json())
+              .then((data) => setScripts(data.scripts ?? []))
+              .catch(() => setScripts([]));
+          }}
+          onCancel={() => setPendingDelete(null)}
+        />
+      )}
+    </>
     );
   }
 
