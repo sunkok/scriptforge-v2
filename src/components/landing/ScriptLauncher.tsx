@@ -10,6 +10,8 @@ import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import TypeToConfirmDialog from "@/components/ui/TypeToConfirmDialog";
 import NameInputDialog from "@/components/ui/NameInputDialog";
 
+type AnimPhase = "profile" | "scripts" | "to-scripts" | "to-profile";
+
 export default function ScriptLauncher() {
   const router = useRouter();
   const activeProfile = useScriptForgeStore((s) => s.activeProfile);
@@ -35,6 +37,26 @@ export default function ScriptLauncher() {
 
   // Profile deletion
   const [pendingDeleteProfile, setPendingDeleteProfile] = useState<Profile | null>(null);
+
+  // Animation
+  const [animPhase, setAnimPhase] = useState<AnimPhase>("profile");
+  const [animActive, setAnimActive] = useState(false);
+  const [containerHeight, setContainerHeight] = useState<number | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const animTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Sync visual phase when activeProfile changes externally (localStorage restore)
+  useEffect(() => {
+    const isAnimating = animPhase === "to-scripts" || animPhase === "to-profile";
+    if (isAnimating) return;
+    if (activeProfile && animPhase === "profile") setAnimPhase("scripts");
+    else if (!activeProfile && animPhase === "scripts") setAnimPhase("profile");
+  }, [activeProfile, animPhase]);
+
+  // Cleanup animation timer on unmount
+  useEffect(() => () => {
+    if (animTimerRef.current) clearTimeout(animTimerRef.current);
+  }, []);
 
   // On mount: fetch profiles and hydrate activeProfile from localStorage
   useEffect(() => {
@@ -69,6 +91,43 @@ export default function ScriptLauncher() {
     if (addingProfile) addInputRef.current?.focus();
   }, [addingProfile]);
 
+  function transitionToScripts(profile: Profile) {
+    setActiveProfile(profile);
+    if (animTimerRef.current) clearTimeout(animTimerRef.current);
+    setContainerHeight(containerRef.current?.offsetHeight ?? null);
+    setAnimActive(false);
+    setAnimPhase("to-scripts");
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        setAnimActive(true);
+        animTimerRef.current = setTimeout(() => {
+          setAnimPhase("scripts");
+          setAnimActive(false);
+          setContainerHeight(null);
+        }, 300);
+      });
+    });
+  }
+
+  function transitionToProfile() {
+    setActiveProfile(null);
+    setScripts(null);
+    if (animTimerRef.current) clearTimeout(animTimerRef.current);
+    setContainerHeight(containerRef.current?.offsetHeight ?? null);
+    setAnimActive(false);
+    setAnimPhase("to-profile");
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        setAnimActive(true);
+        animTimerRef.current = setTimeout(() => {
+          setAnimPhase("profile");
+          setAnimActive(false);
+          setContainerHeight(null);
+        }, 300);
+      });
+    });
+  }
+
   async function handleCreateScript(title: string) {
     if (!activeProfile) return;
     const res = await fetch("/api/scripts", {
@@ -98,7 +157,7 @@ export default function ScriptLauncher() {
         setProfiles(updated);
         setAddingProfile(false);
         setNewProfileName("");
-        setActiveProfile(profile);
+        transitionToScripts(profile);
       }
     } finally {
       setCreatingProfile(false);
@@ -129,97 +188,301 @@ export default function ScriptLauncher() {
     }
   }
 
-  // ─── STEP B: Script launcher ──────────────────────────────────────────────
+  const isAnimating = animPhase === "to-scripts" || animPhase === "to-profile";
+  const showProfile = animPhase === "profile" || animPhase === "to-scripts" || animPhase === "to-profile";
+  const showScripts = animPhase === "scripts" || animPhase === "to-scripts" || animPhase === "to-profile";
 
-  if (activeProfile) {
-    return (
-      <>
-      <div className="modal-glass w-full max-w-[480px] overflow-hidden">
-        <div className="px-5 pt-5 pb-3 flex items-center justify-between">
-          <span className="text-[10px] text-[var(--color-fg-secondary)] uppercase tracking-[0.12em] font-sans">
-            Forge your scripts
-          </span>
-          <span className="text-[12px] font-sans" style={{ color: "#6b6b76" }}>
-            {activeProfile.name}{" "}
-            <button
-              onClick={() => {
-                setActiveProfile(null);
-                setScripts(null);
-              }}
-              className="text-orange-400 hover:text-orange-300 transition-colors"
-            >
-              · Switch
-            </button>
-          </span>
-        </div>
+  function getProfileStyle(): React.CSSProperties {
+    if (!isAnimating) return {};
+    const base: React.CSSProperties = {
+      position: "absolute",
+      top: 0,
+      left: 0,
+      right: 0,
+      transition: "opacity 0.3s ease-out, transform 0.3s ease-out",
+      pointerEvents: "none",
+    };
+    if (animPhase === "to-scripts") {
+      return { ...base, opacity: animActive ? 0 : 1, transform: animActive ? "translateX(-24px)" : "translateX(0)" };
+    }
+    // to-profile: profile entering from left
+    return { ...base, opacity: animActive ? 1 : 0, transform: animActive ? "translateX(0)" : "translateX(-24px)" };
+  }
 
-        {scripts === null ? (
-          <div className="px-5 py-4 text-[13px] text-[var(--color-fg-secondary)] font-sans">
-            Loading…
-          </div>
-        ) : scripts.length === 0 ? (
-          <div className="px-5 py-4 text-[13px] text-[var(--color-fg-secondary)] font-sans">
-            No scripts yet
-          </div>
-        ) : (
-          scripts.map((script) => (
-            <button
-              key={script.scriptId}
-              onClick={() => router.push(`/editor?id=${script.scriptId}`)}
-              className="w-full flex items-center gap-3 px-5 py-3 hover:bg-[var(--color-border-subtle)] transition-colors group"
-            >
-              <FileText
-                size={15}
-                className="text-[var(--color-fg-secondary)] shrink-0 group-hover:text-indigo-400 transition-colors"
-              />
-              <span className="flex-1 text-left text-[var(--color-fg-primary)] text-[14px] font-sans truncate">
-                {script.title || "Untitled"}
-              </span>
-              <span className="text-[var(--color-fg-secondary)] text-[12px] font-sans shrink-0">
-                {relativeTime(script.updatedAt)}
-              </span>
-              <span
-                role="button"
-                tabIndex={0}
-                onClick={(e) => { e.stopPropagation(); setPendingDelete(script); }}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" || e.key === " ") {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    setPendingDelete(script);
-                  }
-                }}
-                className="shrink-0 p-1.5 rounded opacity-0 group-hover:opacity-100 transition-colors hover:text-red-400"
-                style={{ color: "#6b6b76" }}
-                aria-label="Delete script"
+  function getScriptsStyle(): React.CSSProperties {
+    if (!isAnimating) return {};
+    const base: React.CSSProperties = {
+      position: "absolute",
+      top: 0,
+      left: 0,
+      right: 0,
+      transition: "opacity 0.3s ease-out, transform 0.3s ease-out",
+      pointerEvents: "none",
+    };
+    if (animPhase === "to-scripts") {
+      // scripts entering from right
+      return { ...base, opacity: animActive ? 1 : 0, transform: animActive ? "translateX(0)" : "translateX(24px)" };
+    }
+    // to-profile: scripts exiting to right
+    return { ...base, opacity: animActive ? 0 : 1, transform: animActive ? "translateX(24px)" : "translateX(0)" };
+  }
+
+  return (
+    <>
+      <div
+        ref={containerRef}
+        className="w-full max-w-[480px]"
+        style={isAnimating ? { position: "relative", height: containerHeight ?? undefined } : undefined}
+      >
+
+        {/* ─── STEP A: Profile selector ─────────────────────────────────── */}
+        {showProfile && (
+          <div className="modal-glass w-full overflow-hidden" style={getProfileStyle()}>
+            <div className="px-5 pt-5 pb-3 text-[10px] text-[var(--color-fg-secondary)] uppercase tracking-[0.12em] font-sans">
+              Who&apos;s writing?
+            </div>
+
+            {profilesLoading ? (
+              <div className="px-5 py-4 text-[13px] text-[var(--color-fg-secondary)] font-sans">
+                Loading…
+              </div>
+            ) : (
+              <>
+                {profiles.length === 0 && !addingProfile && (
+                  <div className="px-5 py-3 text-[13px] font-sans" style={{ color: "#5a6070" }}>
+                    Create your first profile to begin
+                  </div>
+                )}
+
+                {profiles.map((profile) =>
+                  editingProfileId === profile.profileId ? (
+                    <div key={profile.profileId} className="flex items-center gap-2 px-5 py-2.5">
+                      <input
+                        value={editName}
+                        onChange={(e) => setEditName(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") void handleSaveEdit(profile.profileId);
+                          if (e.key === "Escape") setEditingProfileId(null);
+                        }}
+                        autoFocus
+                        className="flex-1 px-3 py-1.5 rounded-lg text-[14px] font-sans text-white focus:outline-none"
+                        style={{ background: "#0f0f14", border: "1px solid #3a3a55" }}
+                      />
+                      <button
+                        onClick={() => void handleSaveEdit(profile.profileId)}
+                        disabled={!editName.trim() || savingEdit}
+                        className="p-1.5 rounded text-green-400 hover:text-green-300 disabled:opacity-40 transition-colors"
+                      >
+                        <Check size={14} />
+                      </button>
+                      <button
+                        onClick={() => setEditingProfileId(null)}
+                        className="p-1.5 rounded transition-colors"
+                        style={{ color: "#6b6b76" }}
+                      >
+                        <X size={14} />
+                      </button>
+                    </div>
+                  ) : (
+                    <div
+                      key={profile.profileId}
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => transitionToScripts(profile)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          transitionToScripts(profile);
+                        }
+                      }}
+                      className="w-full flex items-center gap-3 px-5 py-3 hover:bg-[var(--color-border-subtle)] transition-colors group cursor-pointer"
+                    >
+                      <User
+                        size={15}
+                        className="text-[var(--color-fg-secondary)] shrink-0 group-hover:text-indigo-400 transition-colors"
+                      />
+                      <span className="flex-1 text-left text-white text-[14px] font-sans font-semibold truncate">
+                        {profile.name}
+                      </span>
+                      <span className="text-[var(--color-fg-secondary)] text-[12px] font-sans shrink-0">
+                        {relativeTime(profile.createdAt)}
+                      </span>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setEditingProfileId(profile.profileId);
+                          setEditName(profile.name);
+                        }}
+                        className="shrink-0 p-1.5 rounded opacity-0 group-hover:opacity-100 transition-opacity hover:text-indigo-400"
+                        style={{ color: "#6b6b76" }}
+                        title="Edit profile name"
+                      >
+                        <Pencil size={13} />
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setPendingDeleteProfile(profile);
+                        }}
+                        className="shrink-0 p-1.5 rounded opacity-0 group-hover:opacity-100 transition-opacity hover:text-red-400"
+                        style={{ color: "#6b6b76" }}
+                        title="Delete profile"
+                      >
+                        <Trash2 size={13} />
+                      </button>
+                      <ChevronRight
+                        size={14}
+                        className="text-[var(--color-fg-secondary)] shrink-0 group-hover:text-indigo-400 transition-colors"
+                      />
+                    </div>
+                  )
+                )}
+              </>
+            )}
+
+            <div className="border-t border-[var(--color-border-subtle)]" />
+
+            {addingProfile ? (
+              <div className="px-5 py-3 flex items-center gap-2">
+                <input
+                  ref={addInputRef}
+                  value={newProfileName}
+                  onChange={(e) => setNewProfileName(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") void handleAddProfile();
+                    if (e.key === "Escape") {
+                      setAddingProfile(false);
+                      setNewProfileName("");
+                    }
+                  }}
+                  placeholder="Profile name"
+                  className="flex-1 px-3 py-1.5 rounded-lg text-[14px] font-sans text-white focus:outline-none"
+                  style={{ background: "#0f0f14", border: "1px solid #3a3a55" }}
+                />
+                <button
+                  onClick={() => void handleAddProfile()}
+                  disabled={!newProfileName.trim() || creatingProfile}
+                  className="px-3 py-1.5 rounded-lg text-[13px] font-sans font-semibold text-white disabled:opacity-40"
+                  style={{ background: "#6366f1" }}
+                >
+                  {creatingProfile ? "…" : "Create"}
+                </button>
+                <button
+                  onClick={() => {
+                    setAddingProfile(false);
+                    setNewProfileName("");
+                  }}
+                  className="text-[13px] font-sans px-2 py-1.5 rounded-lg"
+                  style={{ color: "#6b6b76" }}
+                >
+                  Cancel
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={() => setAddingProfile(true)}
+                className="w-full flex items-center gap-3 px-5 py-3 hover:bg-[var(--color-border-subtle)] transition-colors group"
               >
-                <Trash2 size={14} />
-              </span>
-              <ChevronRight
-                size={14}
-                className="text-[var(--color-fg-secondary)] shrink-0 group-hover:text-indigo-400 transition-colors"
-              />
-            </button>
-          ))
+                <Plus
+                  size={15}
+                  className="text-indigo-400 shrink-0 group-hover:text-indigo-300 transition-colors"
+                />
+                <span className="text-indigo-400 text-[14px] font-sans group-hover:text-indigo-300 transition-colors">
+                  Add new profile
+                </span>
+              </button>
+            )}
+          </div>
         )}
 
-        <div className="border-t border-[var(--color-border-subtle)]" />
+        {/* ─── STEP B: Script launcher ───────────────────────────────────── */}
+        {showScripts && (
+          <div className="modal-glass w-full overflow-hidden" style={getScriptsStyle()}>
+            <div className="px-5 pt-5 pb-3 flex items-center justify-between">
+              <span className="text-[10px] text-[var(--color-fg-secondary)] uppercase tracking-[0.12em] font-sans">
+                Forge your scripts
+              </span>
+              <span className="text-[12px] font-sans" style={{ color: "#6b6b76" }}>
+                {activeProfile?.name}{" "}
+                <button
+                  onClick={transitionToProfile}
+                  className="text-orange-400 hover:text-orange-300 transition-colors"
+                >
+                  · Switch
+                </button>
+              </span>
+            </div>
 
-        <button
-          onClick={() => setNewScriptDialogVisible(true)}
-          className="w-full flex items-center gap-3 px-5 py-3 hover:bg-[var(--color-border-subtle)] transition-colors group"
-        >
-          <Plus
-            size={15}
-            className="text-indigo-400 shrink-0 group-hover:text-indigo-300 transition-colors"
-          />
-          <span className="text-indigo-400 text-[14px] font-sans group-hover:text-indigo-300 transition-colors">
-            Create new script
-          </span>
-        </button>
+            {scripts === null ? (
+              <div className="px-5 py-4 text-[13px] text-[var(--color-fg-secondary)] font-sans">
+                Loading…
+              </div>
+            ) : scripts.length === 0 ? (
+              <div className="px-5 py-4 text-[13px] text-[var(--color-fg-secondary)] font-sans">
+                No scripts yet
+              </div>
+            ) : (
+              scripts.map((script) => (
+                <button
+                  key={script.scriptId}
+                  onClick={() => router.push(`/editor?id=${script.scriptId}`)}
+                  className="w-full flex items-center gap-3 px-5 py-3 hover:bg-[var(--color-border-subtle)] transition-colors group"
+                >
+                  <FileText
+                    size={15}
+                    className="text-[var(--color-fg-secondary)] shrink-0 group-hover:text-indigo-400 transition-colors"
+                  />
+                  <span className="flex-1 text-left text-[var(--color-fg-primary)] text-[14px] font-sans truncate">
+                    {script.title || "Untitled"}
+                  </span>
+                  <span className="text-[var(--color-fg-secondary)] text-[12px] font-sans shrink-0">
+                    {relativeTime(script.updatedAt)}
+                  </span>
+                  <span
+                    role="button"
+                    tabIndex={0}
+                    onClick={(e) => { e.stopPropagation(); setPendingDelete(script); }}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        setPendingDelete(script);
+                      }
+                    }}
+                    className="shrink-0 p-1.5 rounded opacity-0 group-hover:opacity-100 transition-colors hover:text-red-400"
+                    style={{ color: "#6b6b76" }}
+                    aria-label="Delete script"
+                  >
+                    <Trash2 size={14} />
+                  </span>
+                  <ChevronRight
+                    size={14}
+                    className="text-[var(--color-fg-secondary)] shrink-0 group-hover:text-indigo-400 transition-colors"
+                  />
+                </button>
+              ))
+            )}
+
+            <div className="border-t border-[var(--color-border-subtle)]" />
+
+            <button
+              onClick={() => setNewScriptDialogVisible(true)}
+              className="w-full flex items-center gap-3 px-5 py-3 hover:bg-[var(--color-border-subtle)] transition-colors group"
+            >
+              <Plus
+                size={15}
+                className="text-indigo-400 shrink-0 group-hover:text-indigo-300 transition-colors"
+              />
+              <span className="text-indigo-400 text-[14px] font-sans group-hover:text-indigo-300 transition-colors">
+                Create new script
+              </span>
+            </button>
+          </div>
+        )}
+
       </div>
 
-      {pendingDelete && (
+      {pendingDelete && activeProfile && (
         <ConfirmDialog
           title="Delete script?"
           body={`Are you sure you want to delete "${pendingDelete.title || "Untitled"}"? This will permanently delete the script and all its versions, autosaves, and shares. This cannot be undone.`}
@@ -229,7 +492,7 @@ export default function ScriptLauncher() {
             const res = await fetch(`/api/scripts/${pendingDelete.scriptId}`, { method: "DELETE" });
             if (!res.ok) throw new Error("Failed to delete");
             setScripts(null);
-            fetch(`/api/scripts?profileId=${activeProfile!.profileId}`)
+            fetch(`/api/scripts?profileId=${activeProfile.profileId}`)
               .then((r) => r.json())
               .then((data) => setScripts(data.scripts ?? []))
               .catch(() => setScripts([]));
@@ -247,197 +510,32 @@ export default function ScriptLauncher() {
           onCancel={() => setNewScriptDialogVisible(false)}
         />
       )}
-    </>
-    );
-  }
-
-  // ─── STEP A: Profile selector ─────────────────────────────────────────────
-
-  return (
-    <>
-    <div className="modal-glass w-full max-w-[480px] overflow-hidden">
-      <div className="px-5 pt-5 pb-3 text-[10px] text-[var(--color-fg-secondary)] uppercase tracking-[0.12em] font-sans">
-        Who&apos;s writing?
-      </div>
-
-      {profilesLoading ? (
-        <div className="px-5 py-4 text-[13px] text-[var(--color-fg-secondary)] font-sans">
-          Loading…
-        </div>
-      ) : (
-        <>
-          {profiles.length === 0 && !addingProfile && (
-            <div className="px-5 py-3 text-[13px] font-sans" style={{ color: "#5a6070" }}>
-              Create your first profile to begin
-            </div>
-          )}
-
-          {profiles.map((profile) =>
-            editingProfileId === profile.profileId ? (
-              <div key={profile.profileId} className="flex items-center gap-2 px-5 py-2.5">
-                <input
-                  value={editName}
-                  onChange={(e) => setEditName(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") void handleSaveEdit(profile.profileId);
-                    if (e.key === "Escape") setEditingProfileId(null);
-                  }}
-                  autoFocus
-                  className="flex-1 px-3 py-1.5 rounded-lg text-[14px] font-sans text-white focus:outline-none"
-                  style={{ background: "#0f0f14", border: "1px solid #3a3a55" }}
-                />
-                <button
-                  onClick={() => void handleSaveEdit(profile.profileId)}
-                  disabled={!editName.trim() || savingEdit}
-                  className="p-1.5 rounded text-green-400 hover:text-green-300 disabled:opacity-40 transition-colors"
-                >
-                  <Check size={14} />
-                </button>
-                <button
-                  onClick={() => setEditingProfileId(null)}
-                  className="p-1.5 rounded transition-colors"
-                  style={{ color: "#6b6b76" }}
-                >
-                  <X size={14} />
-                </button>
-              </div>
-            ) : (
-              <div
-                key={profile.profileId}
-                role="button"
-                tabIndex={0}
-                onClick={() => setActiveProfile(profile)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" || e.key === " ") {
-                    e.preventDefault();
-                    setActiveProfile(profile);
-                  }
-                }}
-                className="w-full flex items-center gap-3 px-5 py-3 hover:bg-[var(--color-border-subtle)] transition-colors group cursor-pointer"
-              >
-                <User
-                  size={15}
-                  className="text-[var(--color-fg-secondary)] shrink-0 group-hover:text-indigo-400 transition-colors"
-                />
-                <span className="flex-1 text-left text-white text-[14px] font-sans font-semibold truncate">
-                  {profile.name}
-                </span>
-                <span className="text-[var(--color-fg-secondary)] text-[12px] font-sans shrink-0">
-                  {relativeTime(profile.createdAt)}
-                </span>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setEditingProfileId(profile.profileId);
-                    setEditName(profile.name);
-                  }}
-                  className="shrink-0 p-1.5 rounded opacity-0 group-hover:opacity-100 transition-opacity hover:text-indigo-400"
-                  style={{ color: "#6b6b76" }}
-                  title="Edit profile name"
-                >
-                  <Pencil size={13} />
-                </button>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setPendingDeleteProfile(profile);
-                  }}
-                  className="shrink-0 p-1.5 rounded opacity-0 group-hover:opacity-100 transition-opacity hover:text-red-400"
-                  style={{ color: "#6b6b76" }}
-                  title="Delete profile"
-                >
-                  <Trash2 size={13} />
-                </button>
-                <ChevronRight
-                  size={14}
-                  className="text-[var(--color-fg-secondary)] shrink-0 group-hover:text-indigo-400 transition-colors"
-                />
-              </div>
-            )
-          )}
-        </>
+      {pendingDeleteProfile && (
+        <TypeToConfirmDialog
+          title="Delete profile?"
+          body={`This will permanently delete the profile "${pendingDeleteProfile.name}". This cannot be undone.`}
+          confirmPrompt="Type the profile name to confirm:"
+          confirmMatch={pendingDeleteProfile.name}
+          confirmLabel="Delete profile"
+          onConfirm={async () => {
+            const target = pendingDeleteProfile!;
+            const res = await fetch(`/api/profiles/${target.profileId}`, {
+              method: "DELETE",
+            });
+            if (res.status === 409) {
+              const data = (await res.json()) as { error?: string };
+              throw new Error(data.error ?? "Cannot delete this profile.");
+            }
+            if (!res.ok) throw new Error("Failed to delete. Try again.");
+            const newList = profiles.filter((p) => p.profileId !== target.profileId);
+            setProfiles(newList);
+            if (localStorage.getItem("activeProfileId") === target.profileId) {
+              setActiveProfile(null);
+            }
+          }}
+          onCancel={() => setPendingDeleteProfile(null)}
+        />
       )}
-
-      <div className="border-t border-[var(--color-border-subtle)]" />
-
-      {addingProfile ? (
-        <div className="px-5 py-3 flex items-center gap-2">
-          <input
-            ref={addInputRef}
-            value={newProfileName}
-            onChange={(e) => setNewProfileName(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") void handleAddProfile();
-              if (e.key === "Escape") {
-                setAddingProfile(false);
-                setNewProfileName("");
-              }
-            }}
-            placeholder="Profile name"
-            className="flex-1 px-3 py-1.5 rounded-lg text-[14px] font-sans text-white focus:outline-none"
-            style={{ background: "#0f0f14", border: "1px solid #3a3a55" }}
-          />
-          <button
-            onClick={() => void handleAddProfile()}
-            disabled={!newProfileName.trim() || creatingProfile}
-            className="px-3 py-1.5 rounded-lg text-[13px] font-sans font-semibold text-white disabled:opacity-40"
-            style={{ background: "#6366f1" }}
-          >
-            {creatingProfile ? "…" : "Create"}
-          </button>
-          <button
-            onClick={() => {
-              setAddingProfile(false);
-              setNewProfileName("");
-            }}
-            className="text-[13px] font-sans px-2 py-1.5 rounded-lg"
-            style={{ color: "#6b6b76" }}
-          >
-            Cancel
-          </button>
-        </div>
-      ) : (
-        <button
-          onClick={() => setAddingProfile(true)}
-          className="w-full flex items-center gap-3 px-5 py-3 hover:bg-[var(--color-border-subtle)] transition-colors group"
-        >
-          <Plus
-            size={15}
-            className="text-indigo-400 shrink-0 group-hover:text-indigo-300 transition-colors"
-          />
-          <span className="text-indigo-400 text-[14px] font-sans group-hover:text-indigo-300 transition-colors">
-            Add new profile
-          </span>
-        </button>
-      )}
-    </div>
-
-    {pendingDeleteProfile && (
-      <TypeToConfirmDialog
-        title="Delete profile?"
-        body={`This will permanently delete the profile "${pendingDeleteProfile.name}". This cannot be undone.`}
-        confirmPrompt="Type the profile name to confirm:"
-        confirmMatch={pendingDeleteProfile.name}
-        confirmLabel="Delete profile"
-        onConfirm={async () => {
-          const target = pendingDeleteProfile!;
-          const res = await fetch(`/api/profiles/${target.profileId}`, {
-            method: "DELETE",
-          });
-          if (res.status === 409) {
-            const data = (await res.json()) as { error?: string };
-            throw new Error(data.error ?? "Cannot delete this profile.");
-          }
-          if (!res.ok) throw new Error("Failed to delete. Try again.");
-          const newList = profiles.filter((p) => p.profileId !== target.profileId);
-          setProfiles(newList);
-          if (localStorage.getItem("activeProfileId") === target.profileId) {
-            setActiveProfile(null);
-          }
-        }}
-        onCancel={() => setPendingDeleteProfile(null)}
-      />
-    )}
     </>
   );
 }
