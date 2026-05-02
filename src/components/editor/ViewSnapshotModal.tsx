@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { X } from "lucide-react";
 import { useEditor, EditorContent } from "@tiptap/react";
@@ -10,6 +10,7 @@ import Underline from "@tiptap/extension-underline";
 import Placeholder from "@tiptap/extension-placeholder";
 import { PageNode } from "@/components/editor/PageNode";
 import { PaginationEngineContext } from "@/components/editor/PaginationContext";
+import { PaginationEngine } from "@/lib/pagination/engine";
 import {
   SceneHeading,
   Action,
@@ -29,6 +30,9 @@ interface Props {
 }
 
 export default function ViewSnapshotModal({ label, fountain, onClose }: Props) {
+  const [engine, setEngine] = useState<PaginationEngine | null>(null);
+  const engineRef = useRef<PaginationEngine | null>(null);
+
   const editor = useEditor({
     extensions: [
       CustomDocument,
@@ -46,6 +50,18 @@ export default function ViewSnapshotModal({ label, fountain, onClose }: Props) {
     content: fountainToTiptap(fountain),
     editable: false,
     immediatelyRender: false,
+
+    onCreate({ editor }) {
+      const eng = new PaginationEngine();
+      eng.setEditor(editor);
+      engineRef.current = eng;
+      setEngine(eng);
+    },
+
+    onDestroy() {
+      engineRef.current?.destroy();
+      engineRef.current = null;
+    },
   });
 
   useEffect(() => {
@@ -83,7 +99,7 @@ export default function ViewSnapshotModal({ label, fountain, onClose }: Props) {
 
       {/* Read-only editor */}
       <div className="flex-1 overflow-y-auto py-10">
-        <PaginationEngineContext.Provider value={null}>
+        <PaginationEngineContext.Provider value={engine}>
           <EditorContent editor={editor} />
         </PaginationEngineContext.Provider>
       </div>
