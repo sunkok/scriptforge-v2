@@ -408,6 +408,7 @@ export default function WriterAnnotationPanel({
 }) {
   const router = useRouter();
   const activeProfile = useScriptForgeStore((s) => s.activeProfile);
+  const editorTheme = useScriptForgeStore((s) => s.editorTheme);
   const writerName = activeProfile?.name ?? null;
 
   const [fountain, setFountain] = useState<string | null>(null);
@@ -613,7 +614,7 @@ export default function WriterAnnotationPanel({
       {/* Body: two panes */}
       <div className="flex flex-1 min-h-0">
         {/* Left: read-only version render */}
-        <div className="flex-1 overflow-y-auto">
+        <div className={`flex-1 overflow-y-auto${editorTheme === "dark" ? " theme-dark" : ""}`}>
           {fountainLoading ? (
             <div className="flex items-center justify-center h-full">
               <div className="h-7 w-7 animate-spin rounded-full border-2 border-[#2a2a35] border-t-indigo-400" />

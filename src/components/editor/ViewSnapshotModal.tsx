@@ -20,6 +20,7 @@ import {
   Transition,
 } from "@/lib/editor/nodes";
 import { fountainToTiptap } from "@/lib/fountain/parser";
+import { useScriptForgeStore } from "@/lib/store";
 
 const CustomDocument = Document.extend({ content: "page+" });
 
@@ -30,6 +31,7 @@ interface Props {
 }
 
 export default function ViewSnapshotModal({ label, fountain, onClose }: Props) {
+  const editorTheme = useScriptForgeStore((s) => s.editorTheme);
   const [engine, setEngine] = useState<PaginationEngine | null>(null);
   const engineRef = useRef<PaginationEngine | null>(null);
 
@@ -98,7 +100,7 @@ export default function ViewSnapshotModal({ label, fountain, onClose }: Props) {
       </div>
 
       {/* Read-only editor */}
-      <div className="flex-1 overflow-y-auto py-10">
+      <div className={`flex-1 overflow-y-auto py-10${editorTheme === "dark" ? " theme-dark" : ""}`}>
         <PaginationEngineContext.Provider value={engine}>
           <EditorContent editor={editor} />
         </PaginationEngineContext.Provider>
