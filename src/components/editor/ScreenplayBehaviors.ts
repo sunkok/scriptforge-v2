@@ -12,7 +12,7 @@ const TAB_MAP: Record<ElementType, ElementType> = {
   action:        "character",
   character:     "parenthetical",
   parenthetical: "dialogue",
-  dialogue:      "action",
+  dialogue:      "transition",
   transition:    "scene_heading",
 };
 
@@ -22,7 +22,7 @@ const SHIFT_TAB_MAP: Record<ElementType, ElementType> = {
   action:        "scene_heading",
   character:     "action",
   parenthetical: "character",
-  dialogue:      "character",
+  dialogue:      "parenthetical",
   transition:    "dialogue",
 };
 

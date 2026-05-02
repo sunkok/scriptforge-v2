@@ -4,9 +4,9 @@ This document defines how Tab, Shift+Tab, and Enter behave across the 6 screenpl
 
 ## Philosophy
 
-The editor should read the writer's mind. Tab and Enter follow the most common screenwriting patterns so writers rarely press them more than once for the element they actually want next.
+Tab cycles through all 6 element types in natural screenplay order. Predictable and complete — every element reachable, no routing surprises. For direct selection, use Cmd+1..6.
 
-Industry reference: Final Draft, Highland, Arc Studio Pro all use intelligent next-element prediction rather than dumb cycling.
+Enter follows smart defaults for the most common next-element after each type.
 
 ## Element Types
 
@@ -48,13 +48,13 @@ Note: empty Action/Character cases CONVERT the current line (no new line created
 | Action | Character |
 | Character | Parenthetical |
 | Parenthetical | Dialogue |
-| Dialogue | Action |
+| Dialogue | Transition |
 | Transition | Scene Heading |
 
+Full cycle: Scene Heading → Action → Character → Parenthetical → Dialogue → Transition → Scene Heading (repeats)
+
 Example:
-- User types "She walks in." (Action mode), presses Tab
-- Same line is now Character mode — content stays, type indicator changes
-- Press Tab again → Parenthetical, press Tab again → Dialogue
+- Press Tab 6 times in a row → returns to the starting element type
 
 ## SHIFT+TAB — Relabel current line (no new line)
 
@@ -64,7 +64,7 @@ Example:
 | Action | Scene Heading |
 | Character | Action |
 | Parenthetical | Character |
-| Dialogue | Character |
+| Dialogue | Parenthetical |
 | Transition | Dialogue |
 
 This is for when you realize "this line shouldn't be this type, let me fix it."
@@ -88,11 +88,9 @@ Same as Shift+Tab in spirit — relabels current line to a specific type.
 
 ## Reasoning Behind Choices
 
-**Why Tab from Action relabels to Character:** If you typed action and realize "actually this should be a character cue," Tab relabels it without retyping. Tab cycles forward through the most natural progression.
+**Why Tab cycles in screenplay order:** Scene Heading → Action → Character → Parenthetical → Dialogue → Transition mirrors the natural top-to-bottom structure of a screenplay page. The order is predictable because it matches how elements appear on screen, so muscle memory develops quickly.
 
-**Why Tab from Character relabels to Parenthetical:** Enter from Character goes to Dialogue (the common path). Tab offers "wait, I want a parenthetical first" — relabels the character line to Parenthetical. Type the note, then Enter for Dialogue.
-
-**Why Tab from Dialogue goes to Action:** After dialogue, the most common next element is Action (describing what happens next). This breaks the dialogue-cluster loop (Action → Character → Parenthetical → Dialogue → Action → …) so Tab never traps you. For back-and-forth dialogue, use Cmd+3 or type the next character name directly.
+**Why not smart routing:** Context-aware routing creates unreachable elements and surprises. A complete cycle means Tab always works the same way regardless of what the writer is doing — less cognitive load.
 
 **Why Shift+Tab relabels rather than navigates:** Going to a previous existing line is what arrow keys do. Shift+Tab is for fixing the current line's type without retyping its content.
 
