@@ -125,6 +125,20 @@ body {
   height: 0;
 }
 
+/* ─── Annotation highlights ──────────────────────────────────────────────── */
+.annotation-highlight {
+  background-color: rgba(99, 102, 241, 0.18);
+  border-bottom: 2px solid rgba(99, 102, 241, 0.6);
+  cursor: pointer;
+}
+.annotation-highlight.resolved {
+  background-color: rgba(120, 120, 130, 0.12);
+  border-bottom: 2px solid rgba(120, 120, 130, 0.4);
+}
+.annotation-highlight:hover {
+  background-color: rgba(99, 102, 241, 0.28);
+}
+
 /* ─── Print styles ───────────────────────────────────────────────────────── */
 @page {
   size: letter;

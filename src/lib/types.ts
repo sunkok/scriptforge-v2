@@ -69,3 +69,18 @@ export type ShareRecord = {
 export type SharesIndex = {
   shares: ShareRecord[];
 };
+
+export type Annotation = {
+  id: string;
+  scriptId: string;
+  versionId: string;
+  authorName: string;
+  authorRole: "writer" | "reviewer";
+  anchorStart: number;     // Fountain character offset (inclusive)
+  anchorEnd: number;       // Fountain character offset (exclusive)
+  anchorQuote: string;     // up to 200 chars, for resilience
+  body: string;
+  parentId: string | null; // for replies
+  resolvedAt: string | null;
+  createdAt: string;
+};
