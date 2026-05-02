@@ -146,8 +146,7 @@ export default function ScriptLauncher() {
                 setActiveProfile(null);
                 setScripts(null);
               }}
-              className="hover:opacity-80 transition-opacity"
-              style={{ color: "#6366f1" }}
+              className="text-orange-400 hover:text-orange-300 transition-colors"
             >
               · Switch
             </button>
