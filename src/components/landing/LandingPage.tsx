@@ -3,7 +3,7 @@ import ScriptLauncher from "./ScriptLauncher";
 
 export default function LandingPage() {
   return (
-    <main className="min-h-screen flex flex-col items-center justify-center bg-[var(--color-canvas)] px-4">
+    <main className="min-h-screen flex flex-col items-center justify-center bg-black px-4">
       {/* Subtle radial vignette — brightens the center slightly */}
       <div
         className="pointer-events-none fixed inset-0"
