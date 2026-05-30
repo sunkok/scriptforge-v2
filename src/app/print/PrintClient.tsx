@@ -246,25 +246,25 @@ export default function PrintClient() {
   // ─── Page number injection helper ────────────────────────────────────────
   function injectPageNumbers() {
     const sheets = document.querySelectorAll<HTMLElement>(".page-sheet");
-    sheets.forEach((sheet, index) => {
-      // Remove any previously injected page numbers
+    let scriptPageNum = 0;
+    sheets.forEach((sheet) => {
       sheet.querySelectorAll(".print-page-number").forEach((el) => el.remove());
       sheet.style.position = "relative";
-      if (index > 0) {
-        const numDiv = document.createElement("div");
-        numDiv.className = "print-page-number";
-        numDiv.textContent = `${index + 1}.`;
-        numDiv.style.cssText = [
-          "position: absolute",
-          "top: 0.5in",
-          "right: 1in",
-          `font-family: var(--font-courier-prime), 'Courier New', monospace`,
-          "font-size: 12pt",
-          "color: black",
-          "pointer-events: none",
-        ].join("; ");
-        sheet.appendChild(numDiv);
-      }
+      if (sheet.classList.contains("print-title-page")) return;
+      scriptPageNum++;
+      const numDiv = document.createElement("div");
+      numDiv.className = "print-page-number";
+      numDiv.textContent = `${scriptPageNum}.`;
+      numDiv.style.cssText = [
+        "position: absolute",
+        "top: 0.5in",
+        "right: 1in",
+        "font-family: var(--font-courier-prime), 'Courier New', monospace",
+        "font-size: 12pt",
+        "color: black",
+        "pointer-events: none",
+      ].join("; ");
+      sheet.appendChild(numDiv);
     });
   }
 

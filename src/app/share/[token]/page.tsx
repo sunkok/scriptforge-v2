@@ -21,6 +21,7 @@ import { PaginationEngine } from "@/lib/pagination/engine";
 import { fountainToTiptap } from "@/lib/fountain/parser";
 import { buildAnchorMap } from "@/lib/fountain/anchor-mapping";
 import { relativeTime } from "@/lib/relative-time";
+import { useScriptForgeStore } from "@/lib/store";
 import type { Annotation } from "@/lib/types";
 
 const CustomDocument = Document.extend({ content: "page+" });
@@ -768,6 +769,46 @@ function ReviewerView({
   useEffect(() => {
     if (editor) editor.commands.setAnnotations(annotations);
   }, [editor, annotations]);
+
+  // Inject page numbers after pagination settles
+  useEffect(() => {
+    if (!engine) return;
+
+    const inject = () => {
+      let scriptPageNum = 0;
+      document.querySelectorAll<HTMLElement>(".page-sheet").forEach((sheet) => {
+        sheet.querySelectorAll(".print-page-number").forEach((el) => el.remove());
+        sheet.style.position = "relative";
+        scriptPageNum++;
+        const numDiv = document.createElement("div");
+        numDiv.className = "print-page-number";
+        numDiv.textContent = `${scriptPageNum}.`;
+        numDiv.style.cssText = [
+          "position: absolute",
+          "top: 0.5in",
+          "right: 1in",
+          "font-family: var(--font-courier-prime), 'Courier New', monospace",
+          "font-size: 12pt",
+          "color: var(--color-paper-text)",
+          "pointer-events: none",
+        ].join("; ");
+        sheet.appendChild(numDiv);
+      });
+    };
+
+    let hasSeen = false;
+    const unsub = useScriptForgeStore.subscribe((state) => {
+      if (state.paginationStatus === "reconciling") hasSeen = true;
+      if (hasSeen && state.paginationStatus === "idle") {
+        unsub();
+        clearTimeout(safetyTimer);
+        inject();
+      }
+    });
+    const safetyTimer = setTimeout(() => { unsub(); inject(); }, 4000);
+
+    return () => { unsub(); clearTimeout(safetyTimer); };
+  }, [engine]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Native selection → selectionInfo (works even with editable:false)
   useEffect(() => {
